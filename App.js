@@ -29,7 +29,7 @@ export default function App() {
 
           {/* Calculator cards */}
           {calculators.map((c) => (
-            <CalcCard key={c.id} type={c.id} label={c.label} />
+            <CalcCard key={c.id} type={c.id} />
           ))}
 
           <InvestmentCalc />

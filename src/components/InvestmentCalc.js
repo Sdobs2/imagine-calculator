@@ -82,11 +82,6 @@ function InvestmentCalc() {
 
   return (
     <View style={styles.card}>
-      {/* Header */}
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardLabel}>Stock Return Calculator</Text>
-      </View>
-
       {/* Description */}
       <View style={styles.descContainer}>
         <Text style={styles.descText}>

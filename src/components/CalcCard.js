@@ -25,7 +25,7 @@ const accessibilityHints = {
   },
 };
 
-function CalcCard({ type, emoji, label }) {
+function CalcCard({ type, label }) {
   const [a, setA] = useState('');
   const [b, setB] = useState('');
   const [focusedField, setFocusedField] = useState(null);
@@ -84,7 +84,6 @@ function CalcCard({ type, emoji, label }) {
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.cardHeader}>
-        <Text style={styles.cardEmoji}>{emoji}</Text>
         <Text style={styles.cardLabel}>{label}</Text>
       </View>
 

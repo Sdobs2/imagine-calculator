@@ -84,7 +84,6 @@ function InvestmentCalc() {
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.cardHeader}>
-        <Text style={styles.cardEmoji}>{'\uD83D\uDCB0'}</Text>
         <Text style={styles.cardLabel}>Stock Return Calculator</Text>
       </View>
 

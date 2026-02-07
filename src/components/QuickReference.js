@@ -15,7 +15,7 @@ const data = [
 function QuickReference() {
   return (
     <View style={[styles.card, { marginTop: 16 }]}>
-      <Text style={styles.cardLabel}>{'\uD83D\uDCCB'} Quick Reference</Text>
+      <Text style={styles.cardLabel}>Quick Reference</Text>
 
       {/* Table header */}
       <View style={[styles.tableRow, styles.tableHeaderRow]}>

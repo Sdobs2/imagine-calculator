@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StatusBar } from 'react-native';
+import { View, Text, ScrollView, StatusBar, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import CalcCard from './src/components/CalcCard';
 import InvestmentCalc from './src/components/InvestmentCalc';
@@ -6,6 +6,11 @@ import StandardCalc from './src/components/StandardCalc';
 import QuickReference from './src/components/QuickReference';
 import { calculators } from './src/utils/constants';
 import styles from './src/styles';
+
+// Vercel Analytics — only runs on web
+if (Platform.OS === 'web') {
+  import('@vercel/analytics').then(({ inject }) => inject());
+}
 
 export default function App() {
   return (

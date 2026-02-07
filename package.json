@@ -11,6 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.6.1",
     "expo": "^54.0.33",
     "expo-clipboard": "~8.0.8",
     "expo-status-bar": "~3.0.9",

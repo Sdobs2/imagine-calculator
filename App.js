@@ -2,6 +2,7 @@ import { View, Text, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import CalcCard from './src/components/CalcCard';
 import InvestmentCalc from './src/components/InvestmentCalc';
+import StandardCalc from './src/components/StandardCalc';
 import QuickReference from './src/components/QuickReference';
 import { calculators } from './src/utils/constants';
 import styles from './src/styles';
@@ -33,6 +34,9 @@ export default function App() {
           ))}
 
           <InvestmentCalc />
+
+          {/* Standard Calculator */}
+          <StandardCalc />
 
           {/* Quick Reference */}
           <QuickReference />

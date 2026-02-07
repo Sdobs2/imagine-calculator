@@ -249,6 +249,81 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
   },
 
+  // Standard calculator
+  calcDisplay: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginTop: 14,
+    marginBottom: 14,
+    alignItems: 'flex-end',
+    minHeight: 72,
+    justifyContent: 'flex-end',
+  },
+  calcDisplayText: {
+    fontFamily: MONO,
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  calcPreview: {
+    fontFamily: MONO,
+    fontSize: 14,
+    color: 'rgba(245,158,11,0.5)',
+    marginBottom: 4,
+  },
+  calcGrid: {
+    gap: 8,
+  },
+  calcRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  calcBtn: {
+    flex: 1,
+    aspectRatio: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calcBtnOperator: {
+    backgroundColor: 'rgba(245,158,11,0.1)',
+    borderColor: 'rgba(245,158,11,0.2)',
+  },
+  calcBtnFunction: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  calcBtnEquals: {
+    backgroundColor: '#f59e0b',
+    borderColor: '#f59e0b',
+  },
+  calcBtnText: {
+    fontFamily: MONO,
+    fontSize: 20,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  calcBtnTextOperator: {
+    color: '#f59e0b',
+    fontSize: 22,
+  },
+  calcBtnTextFunction: {
+    color: 'rgba(255,255,255,0.5)',
+  },
+  calcBtnTextEquals: {
+    color: '#0a0a0b',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+
   // Footer
   footerHint: {
     textAlign: 'center',

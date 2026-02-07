@@ -22,7 +22,8 @@ export default function App() {
             <Text style={styles.headerTag}>Utility</Text>
             <Text style={styles.headerTitle}>% Calculator</Text>
             <Text style={styles.headerSub}>
-              Three ways to calculate percentages. Results update live.
+              Calculate percentages, find what percent one number is of another,
+              measure percent change, and estimate stock returns — all in real time.
             </Text>
           </View>
 

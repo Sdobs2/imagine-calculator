@@ -4,6 +4,7 @@ import CalcCard from './src/components/CalcCard';
 import InvestmentCalc from './src/components/InvestmentCalc';
 import StandardCalc from './src/components/StandardCalc';
 import QuickReference from './src/components/QuickReference';
+import FaqSection from './src/components/FaqSection';
 import { calculators } from './src/utils/constants';
 import styles from './src/styles';
 
@@ -45,6 +46,9 @@ export default function App() {
 
           {/* Quick Reference */}
           <QuickReference />
+
+          {/* FAQ */}
+          <FaqSection />
 
           {/* Footer hint */}
           <Text style={styles.footerHint}>

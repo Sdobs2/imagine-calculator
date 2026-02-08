@@ -249,6 +249,28 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
   },
 
+  // FAQ
+  faqList: {
+    marginTop: 12,
+    gap: 14,
+  },
+  faqItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+    paddingBottom: 12,
+  },
+  faqQuestion: {
+    fontFamily: MONO,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 6,
+  },
+  faqAnswer: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.45)',
+    lineHeight: 18,
+  },
+
   // Standard calculator
   calcDisplay: {
     backgroundColor: 'rgba(0,0,0,0.35)',

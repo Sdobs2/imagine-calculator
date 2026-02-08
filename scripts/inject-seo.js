@@ -89,6 +89,16 @@ const seoTags = `
     <meta name="twitter:description" content="${PAGE_DESCRIPTION}" />
     <meta name="twitter:image" content="${OG_IMAGE}" />
 
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9VLF050P3G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-9VLF050P3G');
+    </script>
+
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
       {

@@ -14,7 +14,7 @@ import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../utils/ThemeContext';
-import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, COINGECKO_DEMO_KEY } from '../utils/constants';
+import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, CRYPTO_HISTORICAL_PRICES } from '../utils/constants';
 import { calculateTimeMachine, formatUSD } from '../utils/imaginecalc';
 import createStyles from '../styles';
 import YearPicker from './YearPicker';
@@ -80,7 +80,7 @@ function TimeMachineCalc({ prices }) {
     }
   }, [selectedAsset]);
 
-  // ─── Fetch historical price ───────────────────────────────────────────────
+  // ─── Fetch / resolve historical price ────────────────────────────────────
 
   useEffect(() => {
     if (!asset) return;
@@ -92,9 +92,25 @@ function TimeMachineCalc({ prices }) {
       setHistoricalData(null);
 
       try {
-        if (asset.type === 'stock') {
+        if (asset.type === 'crypto') {
+          // Use hardcoded historical prices (CoinGecko free tier no longer
+          // allows historical lookups beyond 365 days).
+          const assetPrices = CRYPTO_HISTORICAL_PRICES[asset.id];
+          if (!assetPrices || assetPrices[selectedYear] == null) {
+            throw new Error(`No data available for ${asset.symbol} in ${selectedYear}.`);
+          }
+          const price = assetPrices[selectedYear];
+          if (!cancelled) {
+            setHistoricalData({
+              symbol: asset.symbol,
+              year: selectedYear,
+              low: price,
+              high: price,
+              close: price,
+            });
+          }
+        } else {
           // Stock historical data requires a backend API route (/api/stock-history).
-          // If the endpoint doesn't exist, show a helpful message.
           let res;
           try {
             res = await fetch(`/api/stock-history?symbol=${asset.symbol}&year=${selectedYear}`);
@@ -115,33 +131,6 @@ function TimeMachineCalc({ prices }) {
           }
           const data = await res.json();
           if (!cancelled) setHistoricalData(data);
-        } else {
-          // Crypto: CoinGecko historical endpoint
-          const dateStr = `01-01-${selectedYear}`;
-          const headers = {};
-          if (COINGECKO_DEMO_KEY && COINGECKO_DEMO_KEY !== 'CG-DEMO') {
-            headers['x-cg-demo-api-key'] = COINGECKO_DEMO_KEY;
-          }
-          const res = await fetch(
-            `https://api.coingecko.com/api/v3/coins/${asset.id}/history?date=${dateStr}&localization=false`,
-            { headers },
-          );
-          if (!res.ok) {
-            if (res.status === 429) throw new Error('Rate limited. Please wait a moment.');
-            throw new Error(`Unable to load ${asset.symbol} data for ${selectedYear}.`);
-          }
-          const data = await res.json();
-          if (!cancelled && data.market_data) {
-            setHistoricalData({
-              symbol: asset.symbol,
-              year: selectedYear,
-              low: data.market_data.current_price.usd,
-              high: data.market_data.current_price.usd,
-              close: data.market_data.current_price.usd,
-            });
-          } else if (!cancelled) {
-            throw new Error(`No data available for ${asset.symbol} in ${selectedYear}.`);
-          }
         }
       } catch (err) {
         if (!cancelled) setHistError(err.message);

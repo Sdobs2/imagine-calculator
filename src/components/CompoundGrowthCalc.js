@@ -2,13 +2,9 @@
  * CompoundGrowthCalc — Long-term compound interest + DCA growth calculator.
  *
  * Features:
- *   - Initial investment input (default $1,000 — baby bond scenario)
- *   - Monthly contribution input
- *   - Annual return presets (6%, 8%, 10% S&P avg, 12%) + manual entry
- *   - Time horizon presets (18yr, 25yr, 30yr, 40yr, 50yr) + manual entry
+ *   - Compact 2-column input layout
  *   - Interactive growth chart with scrubber (reuses GrowthChart)
  *   - Result cards: Total Contributed, Interest Earned, Final Value, Multiplier
- *   - Dynamic descriptive sentence
  *   - Copy result to clipboard
  */
 
@@ -34,24 +30,9 @@ function getMultiplierLabel(m) {
   return `${Math.round(m * 100) / 100}x`;
 }
 
-const RETURN_PRESETS = [
-  { label: '6%', sublabel: 'Conservative', value: 6 },
-  { label: '8%', sublabel: 'Moderate', value: 8 },
-  { label: '10%', sublabel: 'S&P 500 Avg', value: 10 },
-  { label: '12%', sublabel: 'Aggressive', value: 12 },
-];
-
-const YEARS_PRESETS = [
-  { label: '18yr', value: 18 },
-  { label: '25yr', value: 25 },
-  { label: '30yr', value: 30 },
-  { label: '40yr', value: 40 },
-  { label: '50yr', value: 50 },
-];
-
 // ─── Component ──────────────────────────────────────────────────────────────
 
-function CompoundGrowthCalc() {
+function CompoundGrowthCalc({ onScrubChange }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [chartWidth, setChartWidth] = useState(300);
@@ -60,26 +41,9 @@ function CompoundGrowthCalc() {
   const [monthlyContribution, setMonthlyContribution] = useState('100');
   const [annualReturn, setAnnualReturn] = useState('10');
   const [years, setYears] = useState('30');
-  const [selectedReturnPreset, setSelectedReturnPreset] = useState(10);
   const [focusedField, setFocusedField] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
-
-  // ─── Handlers ─────────────────────────────────────────────────────────────
-
-  const handleReturnPresetPress = useCallback((value) => {
-    setSelectedReturnPreset(value);
-    setAnnualReturn(String(value));
-  }, []);
-
-  const handleReturnChange = useCallback((text) => {
-    setAnnualReturn(text);
-    setSelectedReturnPreset(null);
-  }, []);
-
-  const handleYearsPresetPress = useCallback((value) => {
-    setYears(String(value));
-  }, []);
 
   // ─── Calculation ──────────────────────────────────────────────────────────
 
@@ -118,7 +82,7 @@ function CompoundGrowthCalc() {
 
   const copyResult = useCallback(async () => {
     if (!result) return;
-    const text = `Compound Growth: $${formatUSD(result.totalContributed)} invested at ${annualReturn}%/yr for ${years} years → $${formatUSD(result.finalValue)} (${getMultiplierLabel(result.multiplier)}, +$${formatUSD(result.interestEarned)} in growth)`;
+    const text = `Compound Growth: $${formatUSD(result.totalContributed)} invested at ${annualReturn}%/yr for ${years} years \u2192 $${formatUSD(result.finalValue)} (${getMultiplierLabel(result.multiplier)}, +$${formatUSD(result.interestEarned)} in growth)`;
     try {
       await Clipboard.setStringAsync(text);
       setCopied(true);
@@ -136,181 +100,103 @@ function CompoundGrowthCalc() {
       {/* Card header */}
       <Text style={styles.cardLabel}>Compound Growth</Text>
 
-      {/* Dynamic descriptive sentence */}
+      {/* Simple subtitle */}
       <View style={styles.descContainer}>
-        <Text style={styles.descText}>
-          Invest{' '}
-          <Text style={styles.descHighlight}>${initialInvestment || '0'}</Text>
-          {monthlyContribution && parseFloat(monthlyContribution) > 0 ? (
-            <>
-              , add <Text style={styles.descHighlight}>${monthlyContribution}</Text>/mo
-            </>
-          ) : null}
-          , earn{' '}
-          <Text style={styles.descHighlight}>{annualReturn || '0'}%</Text>/yr for{' '}
-          <Text style={styles.descHighlight}>{years || '0'}</Text> years
-          {hasResult ? (
-            <>
-              {' '}→ <Text style={[styles.descHighlight, { color: theme.positive }]}>
-                ${formatUSD(result.finalValue)}
-              </Text>
-            </>
-          ) : '...'}
-        </Text>
+        <Text style={styles.descText}>Set your growth scenario</Text>
       </View>
 
-      {/* ─── Initial Investment ─────────────────────────────────────── */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Initial Investment</Text>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.inputPrefix}>$</Text>
-          <TextInput
-            value={initialInvestment}
-            onChangeText={setInitialInvestment}
-            placeholder="1,000"
-            placeholderTextColor={theme.inputPlaceholder}
-            keyboardType="decimal-pad"
-            selectionColor={theme.accent}
-            style={[styles.input, { paddingLeft: 28 }, focusedField === 'init' && styles.inputFocused]}
-            onFocus={() => setFocusedField('init')}
-            onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Initial investment amount in dollars"
-            accessibilityHint="One-time lump sum to start"
-          />
+      {/* ─── Inputs (2-column grid) ──────────────────────────────────── */}
+      <View style={styles.inputRow2Col}>
+        <View style={styles.inputCol}>
+          <Text style={styles.inputLabel}>Initial Investment</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputPrefix}>$</Text>
+            <TextInput
+              value={initialInvestment}
+              onChangeText={setInitialInvestment}
+              placeholder="1,000"
+              placeholderTextColor={theme.inputPlaceholder}
+              keyboardType="decimal-pad"
+              selectionColor={theme.accent}
+              style={[styles.input, { paddingLeft: 28 }, focusedField === 'init' && styles.inputFocused]}
+              onFocus={() => setFocusedField('init')}
+              onBlur={() => setFocusedField(null)}
+              accessibilityLabel="Initial investment amount in dollars"
+              accessibilityHint="One-time lump sum to start"
+            />
+          </View>
+          <Text style={styles.inputHelperText}>Lump sum</Text>
         </View>
-        <Text style={styles.inputHelperText}>One-time lump sum to start</Text>
+
+        <View style={styles.inputCol}>
+          <Text style={styles.inputLabel}>Monthly Contribution</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputPrefix}>$</Text>
+            <TextInput
+              value={monthlyContribution}
+              onChangeText={setMonthlyContribution}
+              placeholder="100"
+              placeholderTextColor={theme.inputPlaceholder}
+              keyboardType="decimal-pad"
+              selectionColor={theme.accent}
+              style={[styles.input, { paddingLeft: 28 }, focusedField === 'monthly' && styles.inputFocused]}
+              onFocus={() => setFocusedField('monthly')}
+              onBlur={() => setFocusedField(null)}
+              accessibilityLabel="Monthly contribution amount"
+              accessibilityHint="Amount added every month"
+            />
+          </View>
+          <Text style={styles.inputHelperText}>Each month</Text>
+        </View>
       </View>
 
-      {/* ─── Monthly Contribution ───────────────────────────────────── */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Monthly Contribution</Text>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.inputPrefix}>$</Text>
-          <TextInput
-            value={monthlyContribution}
-            onChangeText={setMonthlyContribution}
-            placeholder="100"
-            placeholderTextColor={theme.inputPlaceholder}
-            keyboardType="decimal-pad"
-            selectionColor={theme.accent}
-            style={[styles.input, { paddingLeft: 28 }, focusedField === 'monthly' && styles.inputFocused]}
-            onFocus={() => setFocusedField('monthly')}
-            onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Monthly contribution amount"
-            accessibilityHint="Amount added every month"
-          />
+      <View style={styles.inputRow2Col}>
+        <View style={styles.inputCol}>
+          <Text style={styles.inputLabel}>Annual Return</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              value={annualReturn}
+              onChangeText={setAnnualReturn}
+              placeholder="10"
+              placeholderTextColor={theme.inputPlaceholder}
+              keyboardType="decimal-pad"
+              selectionColor={theme.accent}
+              style={[styles.input, focusedField === 'rate' && styles.inputFocused]}
+              onFocus={() => setFocusedField('rate')}
+              onBlur={() => setFocusedField(null)}
+              accessibilityLabel="Annual return percentage"
+              accessibilityHint="Expected annual return rate"
+            />
+            {annualReturn !== '' && <Text style={styles.inputSuffix}>%</Text>}
+          </View>
+          <Text style={styles.inputHelperText}>S&P 500 avg ~10%</Text>
         </View>
-        <Text style={styles.inputHelperText}>Recurring monthly deposit — set to 0 for lump sum only</Text>
+
+        <View style={styles.inputCol}>
+          <Text style={styles.inputLabel}>Time Horizon</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              value={years}
+              onChangeText={setYears}
+              placeholder="30"
+              placeholderTextColor={theme.inputPlaceholder}
+              keyboardType="number-pad"
+              selectionColor={theme.accent}
+              style={[styles.input, focusedField === 'years' && styles.inputFocused]}
+              onFocus={() => setFocusedField('years')}
+              onBlur={() => setFocusedField(null)}
+              accessibilityLabel="Investment time horizon in years"
+              accessibilityHint="How many years you plan to invest"
+            />
+            {years !== '' && <Text style={styles.inputSuffix}>yr</Text>}
+          </View>
+          {targetDate && (
+            <Text style={styles.inputHelperText}>That's the year {targetDate}</Text>
+          )}
+        </View>
       </View>
 
-      {/* ─── Annual Return ──────────────────────────────────────────── */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Annual Return</Text>
-        <View style={styles.chipRow}>
-          {RETURN_PRESETS.map((preset) => {
-            const isSelected = selectedReturnPreset === preset.value;
-            return (
-              <TouchableOpacity
-                key={preset.value}
-                style={[styles.chip, isSelected && styles.chipSelected]}
-                onPress={() => handleReturnPresetPress(preset.value)}
-                activeOpacity={0.6}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: isSelected }}
-                accessibilityLabel={`${preset.label} ${preset.sublabel}`}
-              >
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                  {preset.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            value={annualReturn}
-            onChangeText={handleReturnChange}
-            placeholder="10"
-            placeholderTextColor={theme.inputPlaceholder}
-            keyboardType="decimal-pad"
-            selectionColor={theme.accent}
-            style={[styles.input, focusedField === 'rate' && styles.inputFocused]}
-            onFocus={() => setFocusedField('rate')}
-            onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Annual return percentage"
-            accessibilityHint="Expected annual return rate"
-          />
-          {annualReturn !== '' && <Text style={styles.inputSuffix}>%</Text>}
-        </View>
-        {selectedReturnPreset && (
-          <Text style={styles.inputHelperText}>
-            {RETURN_PRESETS.find((p) => p.value === selectedReturnPreset)?.sublabel} — historical average
-          </Text>
-        )}
-      </View>
-
-      {/* ─── Time Horizon ───────────────────────────────────────────── */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Time Horizon</Text>
-        <View style={styles.chipRow}>
-          {YEARS_PRESETS.map((preset) => {
-            const isSelected = parseInt(years) === preset.value;
-            return (
-              <TouchableOpacity
-                key={preset.value}
-                style={[styles.chip, isSelected && styles.chipSelected]}
-                onPress={() => handleYearsPresetPress(preset.value)}
-                activeOpacity={0.6}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: isSelected }}
-                accessibilityLabel={`Set time horizon to ${preset.label}`}
-              >
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                  {preset.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            value={years}
-            onChangeText={setYears}
-            placeholder="30"
-            placeholderTextColor={theme.inputPlaceholder}
-            keyboardType="number-pad"
-            selectionColor={theme.accent}
-            style={[styles.input, focusedField === 'years' && styles.inputFocused]}
-            onFocus={() => setFocusedField('years')}
-            onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Investment time horizon in years"
-            accessibilityHint="How many years you plan to invest"
-          />
-          {years !== '' && <Text style={styles.inputSuffix}>yr</Text>}
-        </View>
-        {targetDate && (
-          <Text style={styles.inputHelperText}>That's the year {targetDate}</Text>
-        )}
-      </View>
-
-      {/* ─── Growth Chart ────────────────────────────────────────────── */}
-      {chartData && chartData.length >= 2 && (
-        <View
-          style={styles.chartContainer}
-          onLayout={(e) => setChartWidth(e.nativeEvent.layout.width - 32)}
-        >
-          <Text style={styles.chartTitle}>Compound Growth Projection</Text>
-          <GrowthChart
-            data={chartData}
-            theme={theme}
-            width={chartWidth}
-            valueLabel="Balance"
-            investedLabel="Contributions"
-          />
-        </View>
-      )}
-
-      {/* ─── Results Grid ────────────────────────────────────────────── */}
+      {/* ─── Results Grid (above chart) ──────────────────────────────── */}
       {hasResult && (
         <>
           <View style={styles.resultsGrid}>
@@ -367,6 +253,24 @@ function CompoundGrowthCalc() {
             </Text>
           </TouchableOpacity>
         </>
+      )}
+
+      {/* ─── Growth Chart (below results) ────────────────────────────── */}
+      {chartData && chartData.length >= 2 && (
+        <View
+          style={styles.chartContainer}
+          onLayout={(e) => setChartWidth(e.nativeEvent.layout.width - 32)}
+        >
+          <Text style={styles.chartTitle}>Compound Growth Projection</Text>
+          <GrowthChart
+            data={chartData}
+            theme={theme}
+            width={chartWidth}
+            valueLabel="Balance"
+            investedLabel="Contributions"
+            onScrubChange={onScrubChange}
+          />
+        </View>
       )}
 
       {!hasResult && (

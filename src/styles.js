@@ -42,24 +42,6 @@ export default function createStyles(theme) {
       borderBottomWidth: 1,
       borderBottomColor: theme.divider,
     },
-    heroGlow1: {
-      position: 'absolute',
-      top: -120,
-      right: -80,
-      width: 360,
-      height: 360,
-      borderRadius: 180,
-      backgroundColor: theme.heroGlow,
-    },
-    heroGlow2: {
-      position: 'absolute',
-      bottom: -100,
-      left: -100,
-      width: 300,
-      height: 300,
-      borderRadius: 150,
-      backgroundColor: theme.heroGlow,
-    },
     heroContent: {
       alignItems: 'center',
       width: '100%',
@@ -183,7 +165,7 @@ export default function createStyles(theme) {
     },
     tabButtonText: {
       fontFamily: FONTS.mono,
-      fontSize: 13,
+      fontSize: 11,
       fontWeight: '600',
       color: theme.textMuted,
     },
@@ -298,6 +280,14 @@ export default function createStyles(theme) {
 
     // ─── Input Group (vertical layout for ImagineCalc) ───────────────────────
 
+    inputRow2Col: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: SPACING.md,
+    },
+    inputCol: {
+      flex: 1,
+    },
     inputGroup: {
       marginBottom: SPACING.md,
     },

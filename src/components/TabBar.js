@@ -12,7 +12,8 @@ import { useTheme } from '../utils/ThemeContext';
 import createStyles from '../styles';
 
 const TABS = [
-  { id: 'imagine', label: 'Imagine' },
+  { id: 'imagine', label: 'Projector' },
+  { id: 'timemachine', label: 'Time Machine' },
   { id: 'growth', label: 'Growth' },
   { id: 'tools', label: 'Calculators' },
 ];

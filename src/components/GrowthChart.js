@@ -54,29 +54,83 @@ function formatMonth(month) {
   return `${Math.round(month)}mo`;
 }
 
+// ─── Seeded PRNG (matches imaginecalc.js for consistency) ───────────────────
+
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(init, monthly, current, target, months) {
+  return Math.round((init * 7 + monthly * 13 + current * 31 + target * 37 + months * 41) * 100);
+}
+
+function gaussianRandom(rng) {
+  const u1 = rng();
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1 || 0.0001)) * Math.cos(2 * Math.PI * u2);
+}
+
 /**
  * Generates monthly data points for the DCA growth projection.
- * Interpolates price linearly from current → target over the time horizon.
+ * Supports three price models: bestCase, linear, volatile.
  */
-function generateChartData(initialInvestment, monthlyDCA, currentPrice, targetPrice, months) {
+function generateChartData(initialInvestment, monthlyDCA, currentPrice, targetPrice, months, model = 'bestCase') {
   if (months <= 0 || currentPrice <= 0) return [];
 
-  // Use up to 36 discrete points for smooth curves
-  const numPoints = Math.min(Math.max(months + 1, 3), 37);
-  const step = months / (numPoints - 1);
-  const data = [];
+  const MONTHLY_VOL = 0.15;
+  const rng = model === 'volatile'
+    ? mulberry32(hashSeed(initialInvestment, monthlyDCA, currentPrice, targetPrice, months))
+    : null;
 
-  for (let i = 0; i < numPoints; i++) {
-    const month = Math.min(Math.round(i * step), months);
-    const totalInvested = initialInvestment + monthlyDCA * month;
-    const totalCoins = initialInvestment / currentPrice + (monthlyDCA * month) / currentPrice;
-    // Linear price interpolation from current to target
-    const priceAtMonth = currentPrice + (targetPrice - currentPrice) * (month / months);
-    const portfolioValue = totalCoins * priceAtMonth;
+  // For chart, compute every month for accuracy, then sample points
+  // First, compute month-by-month coin accumulation
+  const monthlyData = [];
+  let totalCoins = initialInvestment / currentPrice;
 
-    data.push({ month, invested: totalInvested, value: portfolioValue });
+  for (let m = 0; m <= months; m++) {
+    const totalInvested = initialInvestment + monthlyDCA * m;
+
+    // Price at this month for portfolio valuation
+    let priceAtMonth = currentPrice + (targetPrice - currentPrice) * (m / months);
+
+    if (model === 'volatile' && rng && m > 0) {
+      const noise = MONTHLY_VOL * gaussianRandom(rng);
+      priceAtMonth = priceAtMonth * (1 + noise);
+      priceAtMonth = Math.max(priceAtMonth, currentPrice * 0.01);
+    }
+
+    // For bestCase, all coins bought at today's price
+    let portfolioValue;
+    if (model === 'bestCase') {
+      const bestCaseCoins = initialInvestment / currentPrice + (monthlyDCA * m) / currentPrice;
+      portfolioValue = bestCaseCoins * priceAtMonth;
+    } else {
+      portfolioValue = totalCoins * priceAtMonth;
+    }
+
+    monthlyData.push({ month: m, invested: totalInvested, value: portfolioValue });
+
+    // Buy coins for next month at this month's price (for linear/volatile)
+    if (m < months && model !== 'bestCase' && priceAtMonth > 0 && monthlyDCA > 0) {
+      totalCoins += monthlyDCA / priceAtMonth;
+    }
   }
 
+  // Sample down to ~36 points for smooth rendering
+  const numPoints = Math.min(Math.max(months + 1, 3), 37);
+  if (monthlyData.length <= numPoints) return monthlyData;
+
+  const step = months / (numPoints - 1);
+  const data = [];
+  for (let i = 0; i < numPoints; i++) {
+    const targetMonth = Math.min(Math.round(i * step), months);
+    data.push(monthlyData[targetMonth]);
+  }
   return data;
 }
 
@@ -110,11 +164,13 @@ export default function GrowthChart({
   currentPrice,
   targetPrice,
   months,
+  model = 'bestCase',
   data: externalData,
   theme,
   width: containerWidth,
   valueLabel = 'Portfolio Value',
   investedLabel = 'Total Invested',
+  onScrubChange,
 }) {
   const width = containerWidth || 300;
   const height = CHART_HEIGHT;
@@ -128,8 +184,8 @@ export default function GrowthChart({
 
   // Use externally provided data if available, otherwise generate from crypto params
   const generatedData = useMemo(
-    () => externalData ? [] : generateChartData(initialInvestment, monthlyDCA, currentPrice, targetPrice, months),
-    [externalData, initialInvestment, monthlyDCA, currentPrice, targetPrice, months],
+    () => externalData ? [] : generateChartData(initialInvestment, monthlyDCA, currentPrice, targetPrice, months, model),
+    [externalData, initialInvestment, monthlyDCA, currentPrice, targetPrice, months, model],
   );
   const data = externalData || generatedData;
 
@@ -212,7 +268,8 @@ export default function GrowthChart({
 
   const handleTouchStart = useCallback((evt) => {
     setScrubFraction(getFractionFromEvent(evt));
-  }, [getFractionFromEvent]);
+    onScrubChange?.(true);
+  }, [getFractionFromEvent, onScrubChange]);
 
   const handleTouchMove = useCallback((evt) => {
     setScrubFraction(getFractionFromEvent(evt));
@@ -220,7 +277,8 @@ export default function GrowthChart({
 
   const handleTouchEnd = useCallback(() => {
     setScrubFraction(null);
-  }, []);
+    onScrubChange?.(false);
+  }, [onScrubChange]);
 
   // ─── Tooltip position — trails behind the scrub dot ─────────────────────
 
@@ -305,12 +363,14 @@ export default function GrowthChart({
         </View>
       )}
 
-      {/* Chart with touch overlay */}
+      {/* Chart with touch overlay — aggressive capture prevents ScrollView stealing gesture */}
       <View
         ref={chartRef}
         style={{ position: 'relative', cursor: isScrubbing ? 'grabbing' : 'crosshair' }}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
+        onStartShouldSetResponderCapture={() => true}
+        onMoveShouldSetResponderCapture={() => true}
         onResponderGrant={handleTouchStart}
         onResponderMove={handleTouchMove}
         onResponderRelease={handleTouchEnd}

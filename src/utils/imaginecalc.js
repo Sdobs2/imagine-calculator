@@ -1,6 +1,37 @@
 /**
+ * DCA price models:
+ *   'bestCase'  — all purchases at today's price (original, most optimistic)
+ *   'linear'    — price interpolates linearly from current to target each month
+ *   'volatile'  — linear trend + realistic monthly volatility noise
+ */
+
+// ─── Seeded PRNG (mulberry32) for deterministic volatile results ────────────
+
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(init, monthly, current, target, months) {
+  // Simple hash from inputs for deterministic randomness
+  return Math.round((init * 7 + monthly * 13 + current * 31 + target * 37 + months * 41) * 100);
+}
+
+// Box-Muller transform for normally distributed noise
+function gaussianRandom(rng) {
+  const u1 = rng();
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1 || 0.0001)) * Math.cos(2 * Math.PI * u2);
+}
+
+/**
  * Calculate a forward-looking "Imagine If" DCA scenario.
- * Assumes all monthly purchases happen at today's spot price.
+ *
+ * @param {'bestCase'|'linear'|'volatile'} model  Price model to use
  */
 export function calculateImagine(
   initialInvestment,
@@ -8,13 +39,49 @@ export function calculateImagine(
   currentPrice,
   targetPrice,
   months,
+  model = 'bestCase',
 ) {
   if (currentPrice <= 0 || months <= 0) return null;
 
-  const initialCoins = initialInvestment / currentPrice;
-  const dcaCoins = (monthlyDCA * months) / currentPrice;
-  const totalCoins = initialCoins + dcaCoins;
   const totalInvested = initialInvestment + monthlyDCA * months;
+
+  if (model === 'bestCase') {
+    // Original: all purchases at today's price
+    const initialCoins = initialInvestment / currentPrice;
+    const dcaCoins = (monthlyDCA * months) / currentPrice;
+    const totalCoins = initialCoins + dcaCoins;
+    const portfolioValue = totalCoins * targetPrice;
+    const profit = portfolioValue - totalInvested;
+    const multiplier = totalInvested > 0 ? portfolioValue / totalInvested : 0;
+    return { totalInvested, totalCoins, portfolioValue, profit, multiplier };
+  }
+
+  // For linear and volatile: month-by-month accumulation
+  const rng = model === 'volatile'
+    ? mulberry32(hashSeed(initialInvestment, monthlyDCA, currentPrice, targetPrice, months))
+    : null;
+
+  // Monthly volatility — ~15% standard deviation (typical crypto)
+  const MONTHLY_VOL = 0.15;
+
+  let totalCoins = initialInvestment / currentPrice; // initial buy at today's price
+
+  for (let m = 1; m <= months; m++) {
+    // Linear interpolated price at month m
+    let priceAtMonth = currentPrice + (targetPrice - currentPrice) * (m / months);
+
+    if (model === 'volatile' && rng) {
+      // Add noise: price * (1 + vol * gaussian), clamped to stay positive
+      const noise = MONTHLY_VOL * gaussianRandom(rng);
+      priceAtMonth = priceAtMonth * (1 + noise);
+      priceAtMonth = Math.max(priceAtMonth, currentPrice * 0.01); // floor at 1% of current
+    }
+
+    if (priceAtMonth > 0 && monthlyDCA > 0) {
+      totalCoins += monthlyDCA / priceAtMonth;
+    }
+  }
+
   const portfolioValue = totalCoins * targetPrice;
   const profit = portfolioValue - totalInvested;
   const multiplier = totalInvested > 0 ? portfolioValue / totalInvested : 0;

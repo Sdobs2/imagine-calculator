@@ -49,6 +49,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('imagine');
   const scrollViewRef = useRef(null);
   const [calcSectionY, setCalcSectionY] = useState(0);
+  const [isChartScrubbing, setIsChartScrubbing] = useState(false);
 
   // Smooth scroll from hero CTA to calculator section
   const scrollToCalculator = useCallback(() => {
@@ -66,13 +67,10 @@ function AppContent() {
         style={styles.scrollView}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!isChartScrubbing}
       >
         {/* ─── Hero Section (always dark, full-width) ──────────────────── */}
         <View style={styles.hero}>
-          {/* Ambient glow orbs for depth */}
-          <View style={styles.heroGlow1} />
-          <View style={styles.heroGlow2} />
-
           {/* Theme toggle */}
           <TouchableOpacity
             style={styles.themeToggle}
@@ -90,14 +88,14 @@ function AppContent() {
             {/* Tag line */}
             <Text style={styles.heroTag}>Imagine Calculator</Text>
 
-            {/* Main headline — broader than just crypto */}
+            {/* Main headline */}
             <Text style={[styles.heroTitle, isDesktop && { fontSize: 48, lineHeight: 56 }]}>
-              See what your{'\n'}investments could become
+              Imagine what your{'\n'}investments could become
             </Text>
 
-            {/* Sub-headline — mentions both crypto and stocks */}
+            {/* Sub-headline */}
             <Text style={styles.heroSubtitle}>
-              Crypto & stocks · Live prices · DCA scenarios · What-if calculations
+              Crypto & stock growth · Compound · Percentage calculators
             </Text>
 
             {/* Primary CTA */}
@@ -162,13 +160,16 @@ function AppContent() {
                 lastUpdated={lastUpdated}
                 onRetry={refresh}
               />
-              <ImagineCalc prices={prices} loading={loading} />
-              <TimeMachineCalc prices={prices} />
+              <ImagineCalc prices={prices} loading={loading} onScrubChange={setIsChartScrubbing} />
             </>
           )}
 
+          {activeTab === 'timemachine' && (
+            <TimeMachineCalc prices={prices} />
+          )}
+
           {activeTab === 'growth' && (
-            <CompoundGrowthCalc />
+            <CompoundGrowthCalc onScrubChange={setIsChartScrubbing} />
           )}
 
           {activeTab === 'tools' && (

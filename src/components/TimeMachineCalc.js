@@ -4,7 +4,7 @@
  * Features:
  *   - Asset selector (stocks + crypto) with categorized chips
  *   - Year picker with scrollable modal
- *   - Historical price fetch (Alpha Vantage for stocks, CoinGecko for crypto)
+ *   - Hardcoded split-adjusted historical prices (stocks + crypto)
  *   - Result cards showing shares/coins, current value, profit, multiplier
  *   - Inline loading and error states
  *   - Full accessibility labels
@@ -14,7 +14,7 @@ import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../utils/ThemeContext';
-import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, CRYPTO_HISTORICAL_PRICES } from '../utils/constants';
+import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, STOCK_HISTORICAL_PRICES, CRYPTO_HISTORICAL_PRICES, STOCK_CURRENT_PRICES } from '../utils/constants';
 import { calculateTimeMachine, formatUSD } from '../utils/imaginecalc';
 import createStyles from '../styles';
 import YearPicker from './YearPicker';
@@ -59,7 +59,6 @@ function TimeMachineCalc({ prices }) {
   const [invested, setInvested] = useState('1000');
   const [focusedField, setFocusedField] = useState(null);
   const [historicalData, setHistoricalData] = useState(null);
-  const [histLoading, setHistLoading] = useState(false);
   const [histError, setHistError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -80,76 +79,41 @@ function TimeMachineCalc({ prices }) {
     }
   }, [selectedAsset]);
 
-  // ─── Fetch / resolve historical price ────────────────────────────────────
+  // ─── Resolve historical price from hardcoded data ────────────────────────
 
   useEffect(() => {
     if (!asset) return;
-    let cancelled = false;
 
-    async function fetchHistory() {
-      setHistLoading(true);
-      setHistError(null);
+    setHistError(null);
+
+    // Look up price from hardcoded tables (split-adjusted Year Open prices)
+    const lookup = asset.type === 'crypto'
+      ? CRYPTO_HISTORICAL_PRICES[asset.id]
+      : STOCK_HISTORICAL_PRICES[asset.symbol];
+
+    if (!lookup || lookup[selectedYear] == null) {
       setHistoricalData(null);
-
-      try {
-        if (asset.type === 'crypto') {
-          // Use hardcoded historical prices (CoinGecko free tier no longer
-          // allows historical lookups beyond 365 days).
-          const assetPrices = CRYPTO_HISTORICAL_PRICES[asset.id];
-          if (!assetPrices || assetPrices[selectedYear] == null) {
-            throw new Error(`No data available for ${asset.symbol} in ${selectedYear}.`);
-          }
-          const price = assetPrices[selectedYear];
-          if (!cancelled) {
-            setHistoricalData({
-              symbol: asset.symbol,
-              year: selectedYear,
-              low: price,
-              high: price,
-              close: price,
-            });
-          }
-        } else {
-          // Stock historical data requires a backend API route (/api/stock-history).
-          let res;
-          try {
-            res = await fetch(`/api/stock-history?symbol=${asset.symbol}&year=${selectedYear}`);
-          } catch {
-            throw new Error(`Stock historical data is not available yet. Coming soon!`);
-          }
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            if (res.status === 500 && body.error?.includes('API key')) {
-              throw new Error('Stock data is temporarily unavailable.');
-            } else if (res.status === 429) {
-              throw new Error('Too many requests. Please wait a moment.');
-            } else if (res.status === 404) {
-              throw new Error(`No data found for ${asset.symbol} in ${selectedYear}.`);
-            } else {
-              throw new Error(body.error || 'Unable to fetch stock data.');
-            }
-          }
-          const data = await res.json();
-          if (!cancelled) setHistoricalData(data);
-        }
-      } catch (err) {
-        if (!cancelled) setHistError(err.message);
-      } finally {
-        if (!cancelled) setHistLoading(false);
-      }
+      setHistError(`No data available for ${asset.symbol} in ${selectedYear}.`);
+      return;
     }
 
-    fetchHistory();
-    return () => { cancelled = true; };
+    const price = lookup[selectedYear];
+    setHistoricalData({
+      symbol: asset.symbol,
+      year: selectedYear,
+      low: price,
+      high: price,
+      close: price,
+    });
   }, [asset, selectedYear]);
 
-  // Get current price
+  // Get current price (live for crypto, fallback for stocks)
   const currentPrice = useMemo(() => {
     if (!asset) return 0;
     if (asset.type === 'crypto' && prices?.[asset.id]) return prices[asset.id].usd;
-    if (historicalData?.currentPrice) return historicalData.currentPrice;
+    if (asset.type === 'stock' && STOCK_CURRENT_PRICES[asset.symbol]) return STOCK_CURRENT_PRICES[asset.symbol];
     return 0;
-  }, [asset, prices, historicalData]);
+  }, [asset, prices]);
 
   const historicalPrice = historicalData?.low ?? 0;
 
@@ -245,16 +209,15 @@ function TimeMachineCalc({ prices }) {
       />
 
       {/* Historical price display */}
-      {historicalData && !histLoading && (
+      {historicalData && (
         <View style={styles.currentPriceRow}>
           <Text style={styles.currentPriceText}>
-            {asset.symbol} low in {selectedYear}:{' '}
+            {asset.symbol} in Jan {selectedYear}:{' '}
           </Text>
           <Text style={styles.currentPriceAmount}>${formatUSD(historicalPrice)}</Text>
         </View>
       )}
 
-      {histLoading && <Text style={styles.hintText}>Loading historical data...</Text>}
       {histError && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{histError}</Text>
@@ -340,7 +303,7 @@ function TimeMachineCalc({ prices }) {
         </>
       )}
 
-      {!hasResult && !histLoading && !histError && (
+      {!hasResult && !histError && (
         <Text style={styles.hintText}>Enter an amount to see what could have been</Text>
       )}
 

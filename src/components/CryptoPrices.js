@@ -86,7 +86,7 @@ function CryptoPrices({ prices, loading, error, lastUpdated, onRetry }) {
         </ScrollView>
       )}
 
-      {error && (
+      {error && !prices && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>
             {error}

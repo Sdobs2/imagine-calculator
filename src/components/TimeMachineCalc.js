@@ -5,6 +5,7 @@ import { useTheme } from '../utils/ThemeContext';
 import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, COINGECKO_DEMO_KEY } from '../utils/constants';
 import { calculateTimeMachine, formatUSD } from '../utils/imaginecalc';
 import createStyles from '../styles';
+import YearPicker from './YearPicker';
 
 function getMultiplierLabel(m) {
   if (m <= 0) return '0x';
@@ -237,28 +238,13 @@ function TimeMachineCalc({ prices }) {
         })}
       </ScrollView>
 
-      {/* Year selector (filtered) */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 16 }}
-      >
-        {availableYears.map((year) => {
-          const isSelected = year === selectedYear;
-          return (
-            <TouchableOpacity
-              key={year}
-              style={[styles.chip, isSelected && styles.chipSelected, { marginRight: 8 }]}
-              onPress={() => setSelectedYear(year)}
-              activeOpacity={0.6}
-            >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                {year}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {/* Year selector */}
+      <Text style={styles.sectionLabel}>Year</Text>
+      <YearPicker
+        selectedYear={selectedYear}
+        years={availableYears}
+        onYearChange={setSelectedYear}
+      />
 
       {/* Historical price display */}
       {historicalData && !histLoading && (
@@ -315,9 +301,9 @@ function TimeMachineCalc({ prices }) {
               </Text>
             </View>
 
-            <View style={[styles.resultGridItem, { backgroundColor: theme.accentBg, borderColor: theme.accentBorder }]}>
+            <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
               <Text style={styles.investResultLabel}>Value Today</Text>
-              <Text style={[styles.investResultValue, { color: theme.accent, fontSize: 18 }]}>
+              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}>
                 ${formatUSD(result.currentValue)}
               </Text>
             </View>

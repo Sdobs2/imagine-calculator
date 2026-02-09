@@ -213,6 +213,85 @@ export default function createStyles(theme) {
       marginTop: 4,
     },
 
+    // Year picker
+    yearPickerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      marginBottom: 16,
+    },
+    yearPickerButtonText: {
+      fontFamily: MONO,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    yearPickerOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    yearPickerModal: {
+      width: 280,
+      borderRadius: 20,
+      borderWidth: 1,
+      paddingTop: 20,
+      paddingBottom: 16,
+      paddingHorizontal: 16,
+      ...(theme.shadow
+        ? {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 20 },
+            shadowOpacity: 0.3,
+            shadowRadius: 30,
+            elevation: 20,
+          }
+        : {}),
+    },
+    yearPickerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    yearPickerList: {
+      overflow: 'hidden',
+      borderRadius: 12,
+      position: 'relative',
+    },
+    yearPickerHighlight: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      borderWidth: 1,
+      borderRadius: 10,
+      zIndex: 0,
+    },
+    yearPickerItem: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1,
+    },
+    yearPickerItemText: {
+      fontFamily: MONO,
+      fontSize: 18,
+    },
+    yearPickerDone: {
+      marginTop: 16,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+    yearPickerDoneText: {
+      color: '#ffffff',
+      fontWeight: '700',
+      fontSize: 15,
+    },
+
     // Result box
     resultBox: {
       backgroundColor: theme.surfaceHover,

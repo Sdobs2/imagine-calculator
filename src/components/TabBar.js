@@ -4,8 +4,8 @@ import { useTheme } from '../utils/ThemeContext';
 import createStyles from '../styles';
 
 const TABS = [
-  { id: 'imagine', label: 'Imagine' },
   { id: 'tools', label: 'Percentage Calculators' },
+  { id: 'imagine', label: 'Imagine' },
 ];
 
 function TabBar({ activeTab, onTabChange }) {

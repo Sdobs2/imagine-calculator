@@ -340,9 +340,9 @@ function ImagineCalc({ prices, loading }) {
               </Text>
             </View>
 
-            <View style={[styles.resultGridItem, { backgroundColor: theme.accentBg, borderColor: theme.accentBorder }]}>
+            <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
               <Text style={styles.investResultLabel}>Portfolio Value</Text>
-              <Text style={[styles.investResultValue, { color: theme.accent, fontSize: 18 }]}>
+              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}>
                 ${formatUSD(result.portfolioValue)}
               </Text>
             </View>

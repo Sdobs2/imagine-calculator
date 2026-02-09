@@ -24,7 +24,7 @@ function AppContent() {
   const { theme, mode, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { prices, loading, error, lastUpdated, refresh } = useCryptoPrices();
-  const [activeTab, setActiveTab] = useState('imagine');
+  const [activeTab, setActiveTab] = useState('tools');
 
   return (
     <SafeAreaView style={styles.safeArea}>

@@ -89,7 +89,7 @@ function CryptoPrices({ prices, loading, error, lastUpdated, onRetry }) {
       {error && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>
-            Failed to load prices: {error}
+            {error}
           </Text>
           {onRetry && (
             <TouchableOpacity

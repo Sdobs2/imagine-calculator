@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../utils/ThemeContext';
-import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS } from '../utils/constants';
+import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, COINGECKO_DEMO_KEY } from '../utils/constants';
 import { calculateTimeMachine, formatUSD } from '../utils/imaginecalc';
 import createStyles from '../styles';
 
@@ -14,18 +14,36 @@ function getMultiplierLabel(m) {
   return `${Math.round(m * 100) / 100}x`;
 }
 
-const ALL_ASSETS = [
-  ...SUPPORTED_STOCKS.map((s) => ({ ...s, type: 'stock' })),
-  ...SUPPORTED_CRYPTOS.map((c) => ({
-    symbol: c.symbol,
-    name: c.name,
-    id: c.id,
-    type: 'crypto',
-  })),
-];
+const STOCK_ASSETS = SUPPORTED_STOCKS.map((s) => ({ ...s, type: 'stock' }));
+const CRYPTO_ASSETS = SUPPORTED_CRYPTOS.map((c) => ({
+  symbol: c.symbol,
+  name: c.name,
+  id: c.id,
+  type: 'crypto',
+}));
+const ALL_ASSETS = [...STOCK_ASSETS, ...CRYPTO_ASSETS];
 
-const YEARS = [];
-for (let y = 2025; y >= 2005; y--) YEARS.push(y);
+// Earliest year with reliable data for each asset
+const ASSET_START_YEARS = {
+  TSLA: 2010,
+  AAPL: 2005,
+  AMZN: 2005,
+  GOOG: 2005,
+  NVDA: 2005,
+  META: 2012,
+  MSFT: 2005,
+  NFLX: 2005,
+  'BRK.B': 2005,
+  JPM: 2005,
+  BTC: 2011,
+  ETH: 2016,
+  SOL: 2021,
+  DOGE: 2014,
+  XRP: 2014,
+};
+
+const ALL_YEARS = [];
+for (let y = 2025; y >= 2005; y--) ALL_YEARS.push(y);
 
 function TimeMachineCalc({ prices }) {
   const { theme } = useTheme();
@@ -33,7 +51,7 @@ function TimeMachineCalc({ prices }) {
 
   const [selectedAsset, setSelectedAsset] = useState('TSLA');
   const [selectedYear, setSelectedYear] = useState(2015);
-  const [invested, setInvested] = useState('');
+  const [invested, setInvested] = useState('1000');
   const [focusedField, setFocusedField] = useState(null);
   const [historicalData, setHistoricalData] = useState(null);
   const [histLoading, setHistLoading] = useState(false);
@@ -42,6 +60,20 @@ function TimeMachineCalc({ prices }) {
   const [copyFailed, setCopyFailed] = useState(false);
 
   const asset = ALL_ASSETS.find((a) => a.symbol === selectedAsset);
+
+  // Filter years based on selected asset
+  const availableYears = useMemo(() => {
+    const startYear = ASSET_START_YEARS[selectedAsset] || 2005;
+    return ALL_YEARS.filter((y) => y >= startYear);
+  }, [selectedAsset]);
+
+  // Auto-adjust year when switching to an asset with a later start date
+  useEffect(() => {
+    const startYear = ASSET_START_YEARS[selectedAsset] || 2005;
+    if (selectedYear < startYear) {
+      setSelectedYear(startYear);
+    }
+  }, [selectedAsset]);
 
   // Fetch historical price when asset/year changes
   useEffect(() => {
@@ -58,7 +90,18 @@ function TimeMachineCalc({ prices }) {
           const res = await fetch(
             `/api/stock-history?symbol=${asset.symbol}&year=${selectedYear}`,
           );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            if (res.status === 500 && body.error?.includes('API key')) {
+              throw new Error('Stock data is temporarily unavailable.');
+            } else if (res.status === 429) {
+              throw new Error('Too many requests. Please wait a moment.');
+            } else if (res.status === 404) {
+              throw new Error(`No data found for ${asset.symbol} in ${selectedYear}.`);
+            } else {
+              throw new Error(body.error || 'Unable to fetch stock data.');
+            }
+          }
           const data = await res.json();
           if (!cancelled) setHistoricalData(data);
         } else {
@@ -66,8 +109,14 @@ function TimeMachineCalc({ prices }) {
           const dateStr = `01-01-${selectedYear}`;
           const res = await fetch(
             `https://api.coingecko.com/api/v3/coins/${asset.id}/history?date=${dateStr}&localization=false`,
+            { headers: { 'x-cg-demo-api-key': COINGECKO_DEMO_KEY } },
           );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res.ok) {
+            if (res.status === 429) {
+              throw new Error('Rate limited. Please wait a moment.');
+            }
+            throw new Error(`Unable to load ${asset.symbol} data for ${selectedYear}.`);
+          }
           const data = await res.json();
           if (!cancelled && data.market_data) {
             setHistoricalData({
@@ -78,7 +127,7 @@ function TimeMachineCalc({ prices }) {
               close: data.market_data.current_price.usd,
             });
           } else if (!cancelled) {
-            throw new Error('No data available for this date');
+            throw new Error(`No data available for ${asset.symbol} in ${selectedYear}.`);
           }
         }
       } catch (err) {
@@ -140,13 +189,14 @@ function TimeMachineCalc({ prices }) {
         </Text>
       </View>
 
-      {/* Asset selector */}
+      {/* Stock selector */}
+      <Text style={styles.sectionLabel}>Stocks</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 12 }}
       >
-        {ALL_ASSETS.map((a) => {
+        {STOCK_ASSETS.map((a) => {
           const isSelected = a.symbol === selectedAsset;
           return (
             <TouchableOpacity
@@ -163,13 +213,37 @@ function TimeMachineCalc({ prices }) {
         })}
       </ScrollView>
 
-      {/* Year selector */}
+      {/* Crypto selector */}
+      <Text style={styles.sectionLabel}>Crypto</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={{ marginBottom: 16 }}
       >
-        {YEARS.map((year) => {
+        {CRYPTO_ASSETS.map((a) => {
+          const isSelected = a.symbol === selectedAsset;
+          return (
+            <TouchableOpacity
+              key={a.symbol}
+              style={[styles.chip, isSelected && styles.chipSelected, { marginRight: 8 }]}
+              onPress={() => setSelectedAsset(a.symbol)}
+              activeOpacity={0.6}
+            >
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                {a.symbol}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Year selector (filtered) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 16 }}
+      >
+        {availableYears.map((year) => {
           const isSelected = year === selectedYear;
           return (
             <TouchableOpacity

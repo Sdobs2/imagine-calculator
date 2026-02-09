@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../utils/ThemeContext';
@@ -14,21 +14,80 @@ function getMultiplierLabel(m) {
   return `${Math.round(m * 100) / 100}x`;
 }
 
+const MULTIPLIER_PRESETS = [2, 3, 5, 10, 25, 50, 100];
+
+const MONTHS_PRESETS = [
+  { label: '6mo', value: 6 },
+  { label: '1yr', value: 12 },
+  { label: '2yr', value: 24 },
+  { label: '5yr', value: 60 },
+  { label: '10yr', value: 120 },
+];
+
 function ImagineCalc({ prices, loading }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
-  const [initialInvestment, setInitialInvestment] = useState('');
-  const [monthlyDCA, setMonthlyDCA] = useState('');
+  const [initialInvestment, setInitialInvestment] = useState('1000');
+  const [monthlyDCA, setMonthlyDCA] = useState('100');
   const [targetPrice, setTargetPrice] = useState('');
-  const [months, setMonths] = useState('');
+  const [months, setMonths] = useState('12');
+  const [selectedMultiplier, setSelectedMultiplier] = useState(2);
   const [focusedField, setFocusedField] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [hasSetInitialTarget, setHasSetInitialTarget] = useState(false);
 
   const crypto = SUPPORTED_CRYPTOS.find((c) => c.id === selectedCrypto);
   const currentPrice = prices?.[selectedCrypto]?.usd ?? 0;
+
+  // Set initial target price to 2x once prices load
+  useEffect(() => {
+    if (currentPrice > 0 && !hasSetInitialTarget) {
+      setTargetPrice(String(Math.round(currentPrice * 2)));
+      setHasSetInitialTarget(true);
+    }
+  }, [currentPrice, hasSetInitialTarget]);
+
+  // When switching crypto, recalculate target if multiplier is active
+  useEffect(() => {
+    if (selectedMultiplier && currentPrice > 0 && hasSetInitialTarget) {
+      setTargetPrice(String(Math.round(currentPrice * selectedMultiplier)));
+    }
+  }, [selectedCrypto, currentPrice, selectedMultiplier]);
+
+  // Effective multiplier for the hint
+  const effectiveMultiplier = useMemo(() => {
+    const target = parseFloat(targetPrice);
+    if (currentPrice > 0 && target > 0) return target / currentPrice;
+    return null;
+  }, [targetPrice, currentPrice]);
+
+  // Target date for months hint
+  const targetDate = useMemo(() => {
+    const m = parseInt(months);
+    if (isNaN(m) || m <= 0) return null;
+    const d = new Date();
+    d.setMonth(d.getMonth() + m);
+    return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }, [months]);
+
+  const handleMultiplierPress = useCallback((mult) => {
+    setSelectedMultiplier(mult);
+    if (currentPrice > 0) {
+      setTargetPrice(String(Math.round(currentPrice * mult)));
+    }
+  }, [currentPrice]);
+
+  const handleTargetPriceChange = useCallback((text) => {
+    setTargetPrice(text);
+    setSelectedMultiplier(null); // Clear chip when manually editing
+  }, []);
+
+  const handleMonthsPresetPress = useCallback((value) => {
+    setMonths(String(value));
+  }, []);
 
   const result = useMemo(() => {
     const init = parseFloat(initialInvestment) || 0;
@@ -182,41 +241,85 @@ function ImagineCalc({ prices, loading }) {
         </View>
       </View>
 
-      <View style={styles.inputRow}>
-        <View style={[styles.inputWrapper, { flex: 1 }]}>
-          <Text style={styles.inputLabel}>Target Price</Text>
-          <View style={{ position: 'relative', justifyContent: 'center' }}>
-            <Text style={styles.inputPrefix}>$</Text>
-            <TextInput
-              value={targetPrice}
-              onChangeText={setTargetPrice}
-              placeholder="150,000"
-              placeholderTextColor={theme.textTertiary}
-              keyboardType="decimal-pad"
-              selectionColor={theme.accent}
-              style={[styles.input, { paddingLeft: 28 }, focusedField === 'target' && styles.inputFocused]}
-              onFocus={() => setFocusedField('target')}
-              onBlur={() => setFocusedField(null)}
-              accessibilityLabel="Target crypto price"
-            />
-          </View>
+      {/* Target Price with multiplier chips */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Target Price</Text>
+        <View style={styles.chipRow}>
+          {MULTIPLIER_PRESETS.map((mult) => {
+            const isSelected = selectedMultiplier === mult;
+            return (
+              <TouchableOpacity
+                key={mult}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => handleMultiplierPress(mult)}
+                activeOpacity={0.6}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {mult}x
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-
-        <View style={[styles.inputWrapper, { flex: 1, marginLeft: 10 }]}>
-          <Text style={styles.inputLabel}>Months</Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputPrefix}>$</Text>
           <TextInput
-            value={months}
-            onChangeText={setMonths}
-            placeholder="12"
+            value={targetPrice}
+            onChangeText={handleTargetPriceChange}
+            placeholder="150,000"
             placeholderTextColor={theme.textTertiary}
-            keyboardType="number-pad"
+            keyboardType="decimal-pad"
             selectionColor={theme.accent}
-            style={[styles.input, focusedField === 'months' && styles.inputFocused]}
-            onFocus={() => setFocusedField('months')}
+            style={[styles.input, { paddingLeft: 28 }, focusedField === 'target' && styles.inputFocused]}
+            onFocus={() => setFocusedField('target')}
             onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Investment time horizon in months"
+            accessibilityLabel="Target crypto price"
           />
         </View>
+        {effectiveMultiplier !== null && (
+          <Text style={styles.hintText}>
+            That's {getMultiplierLabel(effectiveMultiplier)} from today's price
+          </Text>
+        )}
+      </View>
+
+      {/* Months with presets */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Time Horizon</Text>
+        <View style={styles.chipRow}>
+          {MONTHS_PRESETS.map((preset) => {
+            const isSelected = parseInt(months) === preset.value;
+            return (
+              <TouchableOpacity
+                key={preset.value}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => handleMonthsPresetPress(preset.value)}
+                activeOpacity={0.6}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {preset.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <TextInput
+          value={months}
+          onChangeText={setMonths}
+          placeholder="12"
+          placeholderTextColor={theme.textTertiary}
+          keyboardType="number-pad"
+          selectionColor={theme.accent}
+          style={[styles.input, focusedField === 'months' && styles.inputFocused]}
+          onFocus={() => setFocusedField('months')}
+          onBlur={() => setFocusedField(null)}
+          accessibilityLabel="Investment time horizon in months"
+        />
+        {targetDate && (
+          <Text style={styles.hintText}>
+            That's {targetDate}
+          </Text>
+        )}
       </View>
 
       {/* Results */}

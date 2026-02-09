@@ -31,4 +31,5 @@ export const SUPPORTED_STOCKS = [
 ];
 
 export const COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price';
+export const COINGECKO_DEMO_KEY = 'CG-DEMO';
 export const PRICE_REFRESH_MS = 60000;

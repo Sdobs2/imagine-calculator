@@ -202,6 +202,16 @@ export default function createStyles(theme) {
       letterSpacing: 1.5,
       marginBottom: 6,
     },
+    sectionLabel: {
+      fontFamily: MONO,
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 1.5,
+      marginBottom: 8,
+      marginTop: 4,
+    },
 
     // Result box
     resultBox: {

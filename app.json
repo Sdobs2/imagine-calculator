@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "Percentage Calculator",
-    "slug": "percentage-calculator",
+    "name": "ImagineCalculator",
+    "slug": "imagine-calculator",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0a0a0b"
+      "backgroundColor": "#FAFAF8"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0a0a0b"
+        "backgroundColor": "#FAFAF8"
       }
     },
     "web": {
       "bundler": "metro",
       "lang": "en",
-      "themeColor": "#0a0a0b",
-      "name": "Percentage Calculator - Calculate Percent Change, Stock Returns & More",
-      "description": "Free online percentage calculator. Quickly calculate what percent one number is of another, find percentage change, estimate stock investment returns, and more."
+      "themeColor": "#FAFAF8",
+      "name": "ImagineCalculator - Imagine Your Crypto Future",
+      "description": "Dream big with ImagineCalculator. See what your crypto portfolio could become with live prices, DCA scenarios, and what-if calculations."
     },
     "plugins": [
       "expo-font"

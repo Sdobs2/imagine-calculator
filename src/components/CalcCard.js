@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { calculate, formatResult } from '../utils/calculate';
-import styles from '../styles';
+import { useTheme } from '../utils/ThemeContext';
+import createStyles from '../styles';
 
 const accessibilityLabels = {
   whatIs: { a: 'Percentage value', b: 'Base number' },
@@ -26,6 +27,9 @@ const accessibilityHints = {
 };
 
 function CalcCard({ type }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [a, setA] = useState('');
   const [b, setB] = useState('');
   const [focusedField, setFocusedField] = useState(null);
@@ -94,9 +98,9 @@ function CalcCard({ type }) {
             value={a}
             onChangeText={setA}
             placeholder={p.a}
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor={theme.textTertiary}
             keyboardType="decimal-pad"
-            selectionColor="#f59e0b"
+            selectionColor={theme.accent}
             style={[
               styles.input,
               focusedField === 'a' && styles.inputFocused,
@@ -118,9 +122,9 @@ function CalcCard({ type }) {
             value={b}
             onChangeText={setB}
             placeholder={p.b}
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor={theme.textTertiary}
             keyboardType="decimal-pad"
-            selectionColor="#f59e0b"
+            selectionColor={theme.accent}
             style={[
               styles.input,
               focusedField === 'b' && styles.inputFocused,
@@ -170,7 +174,7 @@ function CalcCard({ type }) {
           accessibilityRole="button"
           accessibilityLabel="Copy result to clipboard"
         >
-          <Text style={[styles.copyButton, copyFailed && { color: '#ef4444' }]}>
+          <Text style={[styles.copyButton, copyFailed && { color: theme.negative }]}>
             {copied ? '\u2713 Copied!' : copyFailed ? 'Copy failed' : '\u2398 Copy result'}
           </Text>
         </TouchableOpacity>

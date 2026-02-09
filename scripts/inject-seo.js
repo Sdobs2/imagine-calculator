@@ -6,10 +6,10 @@ const fs = require('fs');
 const path = require('path');
 
 const DIST_HTML = path.join(__dirname, '..', 'dist', 'index.html');
-const SITE_URL = 'https://calculator.loveyourcountrythankavet.com';
-const PAGE_TITLE = 'Percentage Calculator - Calculate Percent Change, Stock Returns & More';
+const SITE_URL = 'https://imaginecalculator.com';
+const PAGE_TITLE = 'ImagineCalculator - Imagine Your Crypto Future';
 const PAGE_DESCRIPTION =
-  'Free online percentage calculator. Quickly calculate what percent one number is of another, find percentage change, estimate stock investment returns, and more.';
+  'Dream big with ImagineCalculator. See what your crypto portfolio could become with live prices, DCA scenarios, and what-if calculations.';
 const OG_IMAGE = `${SITE_URL}/og.png`;
 
 const FAQ_SCHEMA = JSON.stringify(
@@ -19,10 +19,42 @@ const FAQ_SCHEMA = JSON.stringify(
     mainEntity: [
       {
         '@type': 'Question',
+        name: 'What is ImagineCalculator?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'ImagineCalculator lets you dream about crypto and stock investments. Enter how much you want to invest, pick a crypto, set a target price, and see what your portfolio could become. It uses live prices from CoinGecko.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Are the crypto prices real-time?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Prices update every 60 seconds from the CoinGecko API. They reflect the current spot price in USD with 24-hour change data.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How does the DCA calculation work?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "The calculator assumes all monthly purchases happen at today's price for simplicity. It calculates: total coins = (initial investment + monthly amount \u00d7 months) / current price, then multiplies by your target price.",
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is this financial advice?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. ImagineCalculator is for entertainment and educational purposes only. Crypto and stock investments are volatile and risky. Always do your own research and consult a financial advisor.',
+        },
+      },
+      {
+        '@type': 'Question',
         name: 'How do I calculate percentage of a number?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Divide the percentage by 100 and multiply by the number. Example: 15% of 200 = (15/100) × 200 = 30.',
+          text: 'Divide the percentage by 100 and multiply by the number. Example: 15% of 200 = (15/100) \u00d7 200 = 30.',
         },
       },
       {
@@ -30,7 +62,7 @@ const FAQ_SCHEMA = JSON.stringify(
         name: 'How do I calculate percent change?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Use ((new − old) / |old|) × 100. A positive result is an increase; a negative result is a decrease.',
+          text: 'Use ((new \u2212 old) / |old|) \u00d7 100. A positive result is an increase; a negative result is a decrease.',
         },
       },
       {
@@ -38,7 +70,7 @@ const FAQ_SCHEMA = JSON.stringify(
         name: 'How do I find what percent one number is of another?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Divide the part by the whole and multiply by 100. Example: 25 is what percent of 200? (25/200) × 100 = 12.5%.',
+          text: 'Divide the part by the whole and multiply by 100. Example: 25 is what percent of 200? (25/200) \u00d7 100 = 12.5%.',
         },
       },
       {
@@ -69,7 +101,7 @@ const seoTags = `
     <meta name="description" content="${PAGE_DESCRIPTION}" />
     <link rel="canonical" href="${SITE_URL}" />
     <meta name="robots" content="index, follow" />
-    <meta name="keywords" content="percentage calculator, percent change calculator, what percent is X of Y, stock return calculator, percentage of a number, percent increase, percent decrease, investment calculator" />
+    <meta name="keywords" content="crypto calculator, bitcoin calculator, what if crypto, DCA calculator, imagine calculator, ethereum calculator, solana calculator, percentage calculator, percent change calculator, stock return calculator, investment calculator" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -77,11 +109,11 @@ const seoTags = `
     <meta property="og:title" content="${PAGE_TITLE}" />
     <meta property="og:description" content="${PAGE_DESCRIPTION}" />
     <meta property="og:image" content="${OG_IMAGE}" />
-    <meta property="og:image:alt" content="Percentage Calculator preview" />
+    <meta property="og:image:alt" content="ImagineCalculator - Imagine Your Crypto Future" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:site_name" content="Percentage Calculator" />
+    <meta property="og:site_name" content="ImagineCalculator" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -104,10 +136,10 @@ const seoTags = `
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Percentage Calculator",
+        "name": "ImagineCalculator",
         "url": "${SITE_URL}",
-        "description": "Free online percentage calculator. Quickly calculate what percent one number is of another, find percentage change, estimate stock investment returns, and more.",
-        "applicationCategory": "UtilityApplication",
+        "description": "Dream big with ImagineCalculator. See what your crypto portfolio could become with live prices, DCA scenarios, and what-if calculations.",
+        "applicationCategory": "FinanceApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript",
         "offers": {
@@ -123,8 +155,8 @@ const seoTags = `
 
 // Also improve the noscript content for crawlers that don't run JS
 const betterNoscript = `<noscript>
-      <h1>Percentage Calculator</h1>
-      <p>Calculate percentages, percent change, stock investment returns, and more. Enable JavaScript to use the interactive calculator.</p>
+      <h1>ImagineCalculator</h1>
+      <p>Dream big. See what your crypto investments could become with live prices, DCA scenarios, and what-if calculations. Enable JavaScript to use the interactive calculator.</p>
     </noscript>`;
 
 let html = fs.readFileSync(DIST_HTML, 'utf8');

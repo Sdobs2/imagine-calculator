@@ -1,6 +1,7 @@
-import { memo } from 'react';
+import { useMemo, memo } from 'react';
 import { View, Text } from 'react-native';
-import styles from '../styles';
+import { useTheme } from '../utils/ThemeContext';
+import createStyles from '../styles';
 
 const data = [
   { pct: '10%', decimal: '0.10', fraction: '1/10', tip: 'Move decimal 1 left' },
@@ -13,24 +14,21 @@ const data = [
 ];
 
 function QuickReference() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={[styles.card, { marginTop: 16 }]}>
       <Text style={styles.cardLabel}>Quick Reference</Text>
-
-      {/* Table header */}
       <View style={[styles.tableRow, styles.tableHeaderRow]}>
         <Text style={[styles.tableHeader, { flex: 1 }]}>%</Text>
         <Text style={[styles.tableHeader, { flex: 1 }]}>Dec</Text>
         <Text style={[styles.tableHeader, { flex: 1 }]}>Frac</Text>
         <Text style={[styles.tableHeader, { flex: 2 }]}>Shortcut</Text>
       </View>
-
-      {/* Table rows */}
       {data.map((row) => (
         <View key={row.pct} style={styles.tableRow}>
-          <Text style={[styles.tableCellHighlight, { flex: 1 }]}>
-            {row.pct}
-          </Text>
+          <Text style={[styles.tableCellHighlight, { flex: 1 }]}>{row.pct}</Text>
           <Text style={[styles.tableCell, { flex: 1 }]}>{row.decimal}</Text>
           <Text style={[styles.tableCell, { flex: 1 }]}>{row.fraction}</Text>
           <Text style={[styles.tableCellTip, { flex: 2 }]}>{row.tip}</Text>

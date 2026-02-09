@@ -1,7 +1,8 @@
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import styles from '../styles';
+import { useTheme } from '../utils/ThemeContext';
+import createStyles from '../styles';
 
 function getMultiplierLabel(m) {
   if (m === null || m <= 0) return null;
@@ -12,6 +13,9 @@ function getMultiplierLabel(m) {
 }
 
 function InvestmentCalc() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [pctGain, setPctGain] = useState('');
   const [invested, setInvested] = useState('');
   const [focusedField, setFocusedField] = useState(null);
@@ -30,43 +34,24 @@ function InvestmentCalc() {
   const isPositive = pct >= 0;
 
   const profitColor = hasInput
-    ? isPositive
-      ? '#22c55e'
-      : '#ef4444'
-    : 'rgba(255,255,255,0.15)';
-
+    ? isPositive ? theme.positive : theme.negative
+    : theme.textTertiary;
   const profitBg = hasInput
-    ? isPositive
-      ? 'rgba(34,197,94,0.08)'
-      : 'rgba(239,68,68,0.08)'
-    : 'rgba(255,255,255,0.02)';
-
+    ? isPositive ? theme.positiveBg : theme.negativeBg
+    : theme.surfaceHover;
   const profitBorder = hasInput
-    ? isPositive
-      ? 'rgba(34,197,94,0.2)'
-      : 'rgba(239,68,68,0.2)'
-    : 'rgba(255,255,255,0.05)';
+    ? isPositive ? theme.positiveBorder : theme.negativeBorder
+    : theme.surfaceBorder;
 
-  const multBg =
-    hasInput && multiplier > 0
-      ? isPositive
-        ? 'rgba(34,197,94,0.08)'
-        : 'rgba(239,68,68,0.08)'
-      : 'rgba(255,255,255,0.02)';
-
-  const multBorder =
-    hasInput && multiplier > 0
-      ? isPositive
-        ? 'rgba(34,197,94,0.25)'
-        : 'rgba(239,68,68,0.25)'
-      : 'rgba(255,255,255,0.05)';
-
-  const multColor =
-    hasInput && multiplier > 0
-      ? isPositive
-        ? '#22c55e'
-        : '#ef4444'
-      : 'rgba(255,255,255,0.15)';
+  const multBg = hasInput && multiplier > 0
+    ? isPositive ? theme.positiveBg : theme.negativeBg
+    : theme.surfaceHover;
+  const multBorder = hasInput && multiplier > 0
+    ? isPositive ? theme.positiveBorder : theme.negativeBorder
+    : theme.surfaceBorder;
+  const multColor = hasInput && multiplier > 0
+    ? isPositive ? theme.positive : theme.negative
+    : theme.textTertiary;
 
   const copyResult = useCallback(async () => {
     const text = `${pctGain}% gain on $${parseFloat(invested).toLocaleString()} \u2192 $${finalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${getMultiplierLabel(multiplier)}, +$${profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
@@ -82,7 +67,6 @@ function InvestmentCalc() {
 
   return (
     <View style={styles.card}>
-      {/* Description */}
       <View style={styles.descContainer}>
         <Text style={styles.descText}>
           If a stock gained{' '}
@@ -92,28 +76,22 @@ function InvestmentCalc() {
         </Text>
       </View>
 
-      {/* Inputs */}
       <View style={styles.inputRow}>
         <View style={styles.inputWrapper}>
           <TextInput
             value={pctGain}
             onChangeText={setPctGain}
             placeholder="% Gain"
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor={theme.textTertiary}
             keyboardType="decimal-pad"
-            selectionColor="#f59e0b"
-            style={[
-              styles.input,
-              focusedField === 'pct' && styles.inputFocused,
-            ]}
+            selectionColor={theme.accent}
+            style={[styles.input, focusedField === 'pct' && styles.inputFocused]}
             onFocus={() => setFocusedField('pct')}
             onBlur={() => setFocusedField(null)}
             accessibilityLabel="Percentage gain"
             accessibilityHint="Enter the percentage gain"
           />
-          {pctGain !== '' && (
-            <Text style={styles.inputSuffix}>%</Text>
-          )}
+          {pctGain !== '' && <Text style={styles.inputSuffix}>%</Text>}
         </View>
 
         <Text style={styles.operator}>on</Text>
@@ -124,14 +102,10 @@ function InvestmentCalc() {
             value={invested}
             onChangeText={setInvested}
             placeholder="Invested"
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor={theme.textTertiary}
             keyboardType="decimal-pad"
-            selectionColor="#f59e0b"
-            style={[
-              styles.input,
-              { paddingLeft: 28 },
-              focusedField === 'inv' && styles.inputFocused,
-            ]}
+            selectionColor={theme.accent}
+            style={[styles.input, { paddingLeft: 28 }, focusedField === 'inv' && styles.inputFocused]}
             onFocus={() => setFocusedField('inv')}
             onBlur={() => setFocusedField(null)}
             accessibilityLabel="Amount invested"
@@ -140,106 +114,33 @@ function InvestmentCalc() {
         </View>
       </View>
 
-      {/* Results row */}
       <View style={styles.investResultRow}>
-        {/* Profit */}
-        <View
-          style={[
-            styles.investResultCard,
-            { flex: 1, backgroundColor: profitBg, borderColor: profitBorder },
-          ]}
-        >
+        <View style={[styles.investResultCard, { flex: 1, backgroundColor: profitBg, borderColor: profitBorder }]}>
           <Text style={styles.investResultLabel}>Profit</Text>
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[
-              styles.investResultValue,
-              { color: profitColor, fontSize: hasInput ? 18 : 16 },
-            ]}
-          >
-            {hasInput
-              ? `${profit >= 0 ? '+' : ''}$${profit.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}`
-              : '\u2014'}
+          <Text accessibilityLiveRegion="polite" style={[styles.investResultValue, { color: profitColor, fontSize: hasInput ? 18 : 16 }]}>
+            {hasInput ? `${profit >= 0 ? '+' : ''}$${profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '\u2014'}
           </Text>
         </View>
 
-        {/* Multiplier */}
-        <View
-          style={[
-            styles.investResultCard,
-            styles.multiplierBadge,
-            { backgroundColor: multBg, borderColor: multBorder },
-          ]}
-        >
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[
-              styles.multiplierText,
-              {
-                color: multColor,
-                fontSize: hasInput && multiplier > 0 ? 20 : 16,
-              },
-            ]}
-          >
-            {hasInput && multiplier > 0
-              ? getMultiplierLabel(multiplier)
-              : '\u2014'}
+        <View style={[styles.investResultCard, styles.multiplierBadge, { backgroundColor: multBg, borderColor: multBorder }]}>
+          <Text accessibilityLiveRegion="polite" style={[styles.multiplierText, { color: multColor, fontSize: hasInput && multiplier > 0 ? 20 : 16 }]}>
+            {hasInput && multiplier > 0 ? getMultiplierLabel(multiplier) : '\u2014'}
           </Text>
         </View>
 
-        {/* Total Value */}
-        <View
-          style={[
-            styles.investResultCard,
-            {
-              flex: 1,
-              backgroundColor: hasInput
-                ? 'rgba(245,158,11,0.08)'
-                : 'rgba(255,255,255,0.02)',
-              borderColor: hasInput
-                ? 'rgba(245,158,11,0.2)'
-                : 'rgba(255,255,255,0.05)',
-            },
-          ]}
-        >
+        <View style={[styles.investResultCard, { flex: 1, backgroundColor: hasInput ? theme.accentBg : theme.surfaceHover, borderColor: hasInput ? theme.accentBorder : theme.surfaceBorder }]}>
           <Text style={styles.investResultLabel}>Total Value</Text>
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[
-              styles.investResultValue,
-              {
-                color: hasInput ? '#f59e0b' : 'rgba(255,255,255,0.15)',
-                fontSize: hasInput ? 18 : 16,
-              },
-            ]}
-          >
-            {hasInput
-              ? `$${finalValue.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}`
-              : '\u2014'}
+          <Text accessibilityLiveRegion="polite" style={[styles.investResultValue, { color: hasInput ? theme.accent : theme.textTertiary, fontSize: hasInput ? 18 : 16 }]}>
+            {hasInput ? `$${finalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '\u2014'}
           </Text>
         </View>
       </View>
 
-      {/* Validation hint */}
-      {!hasInput && (
-        <Text style={styles.hintText}>Enter values above</Text>
-      )}
+      {!hasInput && <Text style={styles.hintText}>Enter values above</Text>}
 
-      {/* Copy */}
       {hasInput && (
-        <TouchableOpacity
-          onPress={copyResult}
-          activeOpacity={0.6}
-          accessibilityRole="button"
-          accessibilityLabel="Copy result to clipboard"
-        >
-          <Text style={[styles.copyButton, copyFailed && { color: '#ef4444' }]}>
+        <TouchableOpacity onPress={copyResult} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel="Copy result to clipboard">
+          <Text style={[styles.copyButton, copyFailed && { color: theme.negative }]}>
             {copied ? '\u2713 Copied!' : copyFailed ? 'Copy failed' : '\u2398 Copy result'}
           </Text>
         </TouchableOpacity>

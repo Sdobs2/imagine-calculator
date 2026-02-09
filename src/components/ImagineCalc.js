@@ -1,10 +1,33 @@
-import { useState, useMemo, useCallback, useEffect, memo } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+/**
+ * ImagineCalc — The flagship "Imagine If..." DCA scenario calculator.
+ *
+ * Features:
+ *   - Crypto selector chips with live price indicator
+ *   - Grouped inputs with labels and helper text
+ *   - Multiplier preset chips for quick target price selection
+ *   - Time horizon presets (6mo, 1yr, 2yr, 5yr, 10yr)
+ *   - Animated growth chart (SVG area chart)
+ *   - Summary result cards with profit/multiplier
+ *   - Dynamic descriptive sentence that updates with inputs
+ *   - Full keyboard accessibility and ARIA attributes
+ *   - Live-updating results as inputs change
+ */
+
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../utils/ThemeContext';
 import { SUPPORTED_CRYPTOS } from '../utils/constants';
 import { calculateImagine, formatUSD, formatCryptoAmount } from '../utils/imaginecalc';
 import createStyles from '../styles';
+import GrowthChart from './GrowthChart';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getMultiplierLabel(m) {
   if (m <= 0) return '0x';
@@ -24,9 +47,12 @@ const MONTHS_PRESETS = [
   { label: '10yr', value: 120 },
 ];
 
+// ─── Component ──────────────────────────────────────────────────────────────
+
 function ImagineCalc({ prices, loading }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [chartWidth, setChartWidth] = useState(300);
 
   const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
   const [initialInvestment, setInitialInvestment] = useState('1000');
@@ -50,21 +76,21 @@ function ImagineCalc({ prices, loading }) {
     }
   }, [currentPrice, hasSetInitialTarget]);
 
-  // When switching crypto, recalculate target if multiplier is active
+  // Recalculate target when switching crypto (if multiplier is active)
   useEffect(() => {
     if (selectedMultiplier && currentPrice > 0 && hasSetInitialTarget) {
       setTargetPrice(String(Math.round(currentPrice * selectedMultiplier)));
     }
   }, [selectedCrypto, currentPrice, selectedMultiplier]);
 
-  // Effective multiplier for the hint
+  // Effective multiplier display
   const effectiveMultiplier = useMemo(() => {
     const target = parseFloat(targetPrice);
     if (currentPrice > 0 && target > 0) return target / currentPrice;
     return null;
   }, [targetPrice, currentPrice]);
 
-  // Target date for months hint
+  // Target date for time horizon hint
   const targetDate = useMemo(() => {
     const m = parseInt(months);
     if (isNaN(m) || m <= 0) return null;
@@ -82,12 +108,14 @@ function ImagineCalc({ prices, loading }) {
 
   const handleTargetPriceChange = useCallback((text) => {
     setTargetPrice(text);
-    setSelectedMultiplier(null); // Clear chip when manually editing
+    setSelectedMultiplier(null);
   }, []);
 
   const handleMonthsPresetPress = useCallback((value) => {
     setMonths(String(value));
   }, []);
+
+  // ─── Calculation ──────────────────────────────────────────────────────────
 
   const result = useMemo(() => {
     const init = parseFloat(initialInvestment) || 0;
@@ -100,6 +128,18 @@ function ImagineCalc({ prices, loading }) {
 
   const hasResult = result !== null;
   const isGain = hasResult && result.profit >= 0;
+
+  // Chart data props
+  const chartProps = useMemo(() => {
+    const init = parseFloat(initialInvestment) || 0;
+    const monthly = parseFloat(monthlyDCA) || 0;
+    const target = parseFloat(targetPrice) || 0;
+    const m = parseInt(months) || 0;
+    if ((init <= 0 && monthly <= 0) || target <= 0 || m <= 0 || currentPrice <= 0) return null;
+    return { initialInvestment: init, monthlyDCA: monthly, currentPrice, targetPrice: target, months: m };
+  }, [initialInvestment, monthlyDCA, currentPrice, targetPrice, months]);
+
+  // ─── Copy ─────────────────────────────────────────────────────────────────
 
   const copyResult = useCallback(async () => {
     if (!result) return;
@@ -114,38 +154,33 @@ function ImagineCalc({ prices, loading }) {
     }
   }, [result, crypto]);
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <View style={styles.card}>
-      <Text style={styles.cardLabel}>Imagine If...</Text>
+      {/* Card header */}
+      <Text style={styles.cardLabel}>Imagine Your Investment</Text>
 
-      {/* Description */}
+      {/* Dynamic descriptive sentence */}
       <View style={styles.descContainer}>
         <Text style={styles.descText}>
           Imagine you invest{' '}
-          <Text style={styles.descHighlight}>
-            ${initialInvestment || '0'}
-          </Text>{' '}
-          in{' '}
+          <Text style={styles.descHighlight}>${initialInvestment || '0'}</Text> in{' '}
           <Text style={styles.descHighlight}>{crypto.name}</Text>
           {currentPrice > 0 && (
             <>
               {' '}today at{' '}
-              <Text style={styles.descHighlight}>
-                ${formatUSD(currentPrice)}
-              </Text>
+              <Text style={styles.descHighlight}>${formatUSD(currentPrice)}</Text>
             </>
           )}
           {monthlyDCA ? (
             <>
-              , add{' '}
-              <Text style={styles.descHighlight}>${monthlyDCA}</Text>{' '}
-              monthly
+              , add <Text style={styles.descHighlight}>${monthlyDCA}</Text> monthly
             </>
           ) : null}
           {months ? (
             <>
-              {' '}for{' '}
-              <Text style={styles.descHighlight}>{months}</Text> months
+              {' '}for <Text style={styles.descHighlight}>{months}</Text> months
             </>
           ) : null}
           {targetPrice ? (
@@ -159,7 +194,8 @@ function ImagineCalc({ prices, loading }) {
         </Text>
       </View>
 
-      {/* Crypto selector */}
+      {/* ─── Crypto Selector ─────────────────────────────────────────── */}
+      <Text style={styles.inputLabel}>Select Cryptocurrency</Text>
       <View style={styles.chipRow}>
         {SUPPORTED_CRYPTOS.map((c) => {
           const isSelected = c.id === selectedCrypto;
@@ -171,13 +207,9 @@ function ImagineCalc({ prices, loading }) {
               activeOpacity={0.6}
               accessibilityRole="radio"
               accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`Select ${c.name}`}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  isSelected && styles.chipTextSelected,
-                ]}
-              >
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {c.symbol}
               </Text>
             </TouchableOpacity>
@@ -185,24 +217,21 @@ function ImagineCalc({ prices, loading }) {
         })}
       </View>
 
-      {/* Current price */}
+      {/* Current price indicator */}
       {currentPrice > 0 && (
         <View style={styles.currentPriceRow}>
           <View style={styles.liveDot} />
           <Text style={styles.currentPriceText}>
             {crypto.symbol} is currently{' '}
           </Text>
-          <Text style={styles.currentPriceAmount}>
-            ${formatUSD(currentPrice)}
-          </Text>
+          <Text style={styles.currentPriceAmount}>${formatUSD(currentPrice)}</Text>
         </View>
       )}
-
       {loading && currentPrice === 0 && (
-        <Text style={styles.hintText}>Loading prices...</Text>
+        <Text style={styles.hintText}>Loading live prices...</Text>
       )}
 
-      {/* Inputs */}
+      {/* ─── Investment Inputs ───────────────────────────────────────── */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Initial Investment</Text>
         <View style={styles.inputWrapper}>
@@ -211,15 +240,17 @@ function ImagineCalc({ prices, loading }) {
             value={initialInvestment}
             onChangeText={setInitialInvestment}
             placeholder="1,000"
-            placeholderTextColor={theme.textTertiary}
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="decimal-pad"
             selectionColor={theme.accent}
             style={[styles.input, { paddingLeft: 28 }, focusedField === 'init' && styles.inputFocused]}
             onFocus={() => setFocusedField('init')}
             onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Initial investment amount"
+            accessibilityLabel="Initial investment amount in dollars"
+            accessibilityHint="Enter the amount you want to invest initially"
           />
         </View>
+        <Text style={styles.inputHelperText}>One-time lump sum at today's price</Text>
       </View>
 
       <View style={styles.inputGroup}>
@@ -230,18 +261,20 @@ function ImagineCalc({ prices, loading }) {
             value={monthlyDCA}
             onChangeText={setMonthlyDCA}
             placeholder="100"
-            placeholderTextColor={theme.textTertiary}
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="decimal-pad"
             selectionColor={theme.accent}
             style={[styles.input, { paddingLeft: 28 }, focusedField === 'dca' && styles.inputFocused]}
             onFocus={() => setFocusedField('dca')}
             onBlur={() => setFocusedField(null)}
             accessibilityLabel="Monthly dollar cost average amount"
+            accessibilityHint="Amount added every month automatically"
           />
         </View>
+        <Text style={styles.inputHelperText}>Dollar-cost average — invest this amount each month</Text>
       </View>
 
-      {/* Target Price with multiplier chips */}
+      {/* ─── Target Price with Multiplier Chips ──────────────────────── */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Target Price</Text>
         <View style={styles.chipRow}>
@@ -253,6 +286,9 @@ function ImagineCalc({ prices, loading }) {
                 style={[styles.chip, isSelected && styles.chipSelected]}
                 onPress={() => handleMultiplierPress(mult)}
                 activeOpacity={0.6}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`Set target to ${mult}x current price`}
               >
                 <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                   {mult}x
@@ -267,23 +303,24 @@ function ImagineCalc({ prices, loading }) {
             value={targetPrice}
             onChangeText={handleTargetPriceChange}
             placeholder="150,000"
-            placeholderTextColor={theme.textTertiary}
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="decimal-pad"
             selectionColor={theme.accent}
             style={[styles.input, { paddingLeft: 28 }, focusedField === 'target' && styles.inputFocused]}
             onFocus={() => setFocusedField('target')}
             onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Target crypto price"
+            accessibilityLabel="Target cryptocurrency price"
+            accessibilityHint="The price you imagine the crypto reaching"
           />
         </View>
         {effectiveMultiplier !== null && (
-          <Text style={styles.hintText}>
+          <Text style={styles.inputHelperText}>
             That's {getMultiplierLabel(effectiveMultiplier)} from today's price
           </Text>
         )}
       </View>
 
-      {/* Months with presets */}
+      {/* ─── Time Horizon with Presets ───────────────────────────────── */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Time Horizon</Text>
         <View style={styles.chipRow}>
@@ -295,6 +332,9 @@ function ImagineCalc({ prices, loading }) {
                 style={[styles.chip, isSelected && styles.chipSelected]}
                 onPress={() => handleMonthsPresetPress(preset.value)}
                 activeOpacity={0.6}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`Set time horizon to ${preset.label}`}
               >
                 <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                   {preset.label}
@@ -307,65 +347,105 @@ function ImagineCalc({ prices, loading }) {
           value={months}
           onChangeText={setMonths}
           placeholder="12"
-          placeholderTextColor={theme.textTertiary}
+          placeholderTextColor={theme.inputPlaceholder}
           keyboardType="number-pad"
           selectionColor={theme.accent}
           style={[styles.input, focusedField === 'months' && styles.inputFocused]}
           onFocus={() => setFocusedField('months')}
           onBlur={() => setFocusedField(null)}
           accessibilityLabel="Investment time horizon in months"
+          accessibilityHint="How many months you plan to invest"
         />
         {targetDate && (
-          <Text style={styles.hintText}>
-            That's {targetDate}
-          </Text>
+          <Text style={styles.inputHelperText}>That's {targetDate}</Text>
         )}
       </View>
 
-      {/* Results */}
+      {/* ─── Growth Chart ────────────────────────────────────────────── */}
+      {chartProps && (
+        <View
+          style={styles.chartContainer}
+          onLayout={(e) => setChartWidth(e.nativeEvent.layout.width - 32)}
+        >
+          <Text style={styles.chartTitle}>Growth Projection</Text>
+          <GrowthChart
+            {...chartProps}
+            theme={theme}
+            width={chartWidth}
+          />
+        </View>
+      )}
+
+      {/* ─── Results Grid ────────────────────────────────────────────── */}
       {hasResult && (
         <>
           <View style={styles.resultsGrid}>
             <View style={[styles.resultGridItem, { backgroundColor: theme.surfaceHover, borderColor: theme.surfaceBorder }]}>
               <Text style={styles.investResultLabel}>Total Invested</Text>
-              <Text style={[styles.investResultValue, { color: theme.textSecondary, fontSize: 16 }]}>
+              <Text
+                style={[styles.investResultValue, { color: theme.textSecondary, fontSize: 16 }]}
+                accessibilityLabel={`Total invested: $${formatUSD(result.totalInvested)}`}
+              >
                 ${formatUSD(result.totalInvested)}
               </Text>
             </View>
 
             <View style={[styles.resultGridItem, { backgroundColor: theme.surfaceHover, borderColor: theme.surfaceBorder }]}>
               <Text style={styles.investResultLabel}>Total {crypto.symbol}</Text>
-              <Text style={[styles.investResultValue, { color: theme.textSecondary, fontSize: 16 }]}>
+              <Text
+                style={[styles.investResultValue, { color: theme.textSecondary, fontSize: 16 }]}
+                accessibilityLabel={`Total ${crypto.symbol}: ${formatCryptoAmount(result.totalCoins)}`}
+              >
                 {formatCryptoAmount(result.totalCoins)}
               </Text>
             </View>
 
             <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
               <Text style={styles.investResultLabel}>Portfolio Value</Text>
-              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}>
+              <Text
+                style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}
+                accessibilityLiveRegion="polite"
+              >
                 ${formatUSD(result.portfolioValue)}
               </Text>
             </View>
 
             <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
-              <Text style={styles.investResultLabel}>Profit</Text>
-              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}>
+              <Text style={styles.investResultLabel}>Profit / Loss</Text>
+              <Text
+                style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}
+                accessibilityLiveRegion="polite"
+              >
                 {result.profit >= 0 ? '+' : ''}${formatUSD(Math.abs(result.profit))}
               </Text>
             </View>
           </View>
 
-          {/* Multiplier */}
-          <View style={{ alignItems: 'center', marginTop: 8 }}>
-            <View style={[styles.investResultCard, styles.multiplierBadge, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
-              <Text style={[styles.multiplierText, { color: isGain ? theme.positive : theme.negative, fontSize: 20 }]}>
+          {/* Multiplier badge */}
+          <View style={{ alignItems: 'center', marginTop: 10 }}>
+            <View style={[
+              styles.investResultCard,
+              styles.multiplierBadge,
+              {
+                backgroundColor: isGain ? theme.positiveBg : theme.negativeBg,
+                borderColor: isGain ? theme.positiveBorder : theme.negativeBorder,
+                borderRadius: 999,
+                paddingHorizontal: 24,
+              },
+            ]}>
+              <Text style={[styles.multiplierText, { color: isGain ? theme.positive : theme.negative, fontSize: 22 }]}>
                 {getMultiplierLabel(result.multiplier)}
               </Text>
             </View>
           </View>
 
-          {/* Copy */}
-          <TouchableOpacity onPress={copyResult} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel="Copy result">
+          {/* Copy result */}
+          <TouchableOpacity
+            onPress={copyResult}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel="Copy result to clipboard"
+          >
             <Text style={[styles.copyButton, copyFailed && { color: theme.negative }]}>
               {copied ? '\u2713 Copied!' : copyFailed ? 'Copy failed' : '\u2398 Copy result'}
             </Text>

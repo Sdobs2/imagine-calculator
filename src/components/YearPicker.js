@@ -1,5 +1,17 @@
+/**
+ * YearPicker — Scrollable year selection modal.
+ *
+ * Features:
+ *   - Trigger button showing current selection
+ *   - Modal overlay with scrollable year list
+ *   - Snap-to-item scrolling for precise selection
+ *   - Highlight bar indicating current position
+ *   - Auto-scrolls to selected year on open
+ *   - Accessible with proper labels and roles
+ */
+
 import { useState, useMemo, useRef, useCallback, memo } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../utils/ThemeContext';
 import createStyles from '../styles';
 
@@ -27,10 +39,13 @@ function YearPicker({ selectedYear, years, onYearChange }) {
     }, 50);
   }, [selectedYear, years]);
 
-  const handleSelect = useCallback((year) => {
-    onYearChange(year);
-    setOpen(false);
-  }, [onYearChange]);
+  const handleSelect = useCallback(
+    (year) => {
+      onYearChange(year);
+      setOpen(false);
+    },
+    [onYearChange],
+  );
 
   return (
     <>
@@ -39,11 +54,13 @@ function YearPicker({ selectedYear, years, onYearChange }) {
         style={[styles.yearPickerButton, { borderColor: theme.inputBorder }]}
         onPress={handleOpen}
         activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={`Selected year: ${selectedYear}. Tap to change.`}
       >
         <Text style={[styles.yearPickerButtonText, { color: theme.text }]}>
           {selectedYear}
         </Text>
-        <Text style={{ color: theme.textTertiary, fontSize: 12 }}>{'\u25BC'}</Text>
+        <Text style={{ color: theme.textMuted, fontSize: 12 }}>{'\u25BC'}</Text>
       </TouchableOpacity>
 
       {/* Modal overlay */}
@@ -57,9 +74,13 @@ function YearPicker({ selectedYear, years, onYearChange }) {
           style={styles.yearPickerOverlay}
           activeOpacity={1}
           onPress={() => setOpen(false)}
+          accessibilityLabel="Close year picker"
         >
           <View
-            style={[styles.yearPickerModal, { backgroundColor: theme.surface, borderColor: theme.surfaceBorder }]}
+            style={[
+              styles.yearPickerModal,
+              { backgroundColor: theme.surfaceElevated, borderColor: theme.surfaceBorder },
+            ]}
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.yearPickerTitle, { color: theme.text }]}>
@@ -96,6 +117,9 @@ function YearPicker({ selectedYear, years, onYearChange }) {
                       style={[styles.yearPickerItem, { height: ITEM_HEIGHT }]}
                       onPress={() => handleSelect(year)}
                       activeOpacity={0.6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${year}`}
+                      accessibilityState={{ selected: isSelected }}
                     >
                       <Text
                         style={[
@@ -116,6 +140,8 @@ function YearPicker({ selectedYear, years, onYearChange }) {
               style={[styles.yearPickerDone, { backgroundColor: theme.accent }]}
               onPress={() => setOpen(false)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Done selecting year"
             >
               <Text style={styles.yearPickerDoneText}>Done</Text>
             </TouchableOpacity>

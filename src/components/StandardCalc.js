@@ -1,3 +1,14 @@
+/**
+ * StandardCalc — Classic calculator with grid button layout.
+ *
+ * Features:
+ *   - Expression display with live preview
+ *   - Grid layout: numbers, operators, functions
+ *   - Keyboard-style button interactions
+ *   - Expression evaluation via safe Function constructor
+ *   - Copy result to clipboard
+ */
+
 import { useState, useCallback, useMemo, memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -68,7 +79,10 @@ function StandardCalc() {
           return;
         case '=': {
           const result = evaluate(display);
-          if (result !== null) { setDisplay(formatDisplay(result)); setJustEvaluated(true); }
+          if (result !== null) {
+            setDisplay(formatDisplay(result));
+            setJustEvaluated(true);
+          }
           return;
         }
         case '\u00B1':
@@ -79,7 +93,10 @@ function StandardCalc() {
           return;
         case '%': {
           const result = evaluate(display);
-          if (result !== null) { setDisplay(formatDisplay(result / 100)); setJustEvaluated(true); }
+          if (result !== null) {
+            setDisplay(formatDisplay(result / 100));
+            setJustEvaluated(true);
+          }
           return;
         }
         default: {
@@ -87,12 +104,16 @@ function StandardCalc() {
           const isDot = btn === '.';
           setDisplay((prev) => {
             if (justEvaluated) {
-              if (isOp) { setJustEvaluated(false); return prev + ' ' + btn + ' '; }
+              if (isOp) {
+                setJustEvaluated(false);
+                return prev + ' ' + btn + ' ';
+              }
               setJustEvaluated(false);
               return isDot ? '0.' : btn;
             }
             if (isOp) {
-              if (isOperator(prev.trim().slice(-1))) return prev.trim().slice(0, -1) + btn + ' ';
+              if (isOperator(prev.trim().slice(-1)))
+                return prev.trim().slice(0, -1) + btn + ' ';
               return prev + ' ' + btn + ' ';
             }
             if (isDot) {
@@ -138,12 +159,26 @@ function StandardCalc() {
   };
 
   return (
-    <View style={[styles.card, { marginTop: 16 }]}>
+    <View style={styles.card}>
       <Text style={styles.cardLabel}>Calculator</Text>
+
+      {/* Display */}
       <View style={styles.calcDisplay}>
-        {preview !== null && <Text style={styles.calcPreview}>{preview}</Text>}
-        <Text style={styles.calcDisplayText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{display}</Text>
+        {preview !== null && (
+          <Text style={styles.calcPreview}>{preview}</Text>
+        )}
+        <Text
+          style={styles.calcDisplayText}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+          accessibilityLiveRegion="polite"
+        >
+          {display}
+        </Text>
       </View>
+
+      {/* Button grid */}
       <View style={styles.calcGrid}>
         {BUTTONS.map((row, ri) => (
           <View key={ri} style={styles.calcRow}>
@@ -154,7 +189,14 @@ function StandardCalc() {
                 activeOpacity={0.5}
                 onPress={() => handlePress(btn)}
                 accessibilityRole="button"
-                accessibilityLabel={btn === '\u232B' ? 'Backspace' : btn === '\u00B1' ? 'Toggle sign' : btn === '\u00D7' ? 'Multiply' : btn === '\u00F7' ? 'Divide' : btn === '\u2212' ? 'Subtract' : btn}
+                accessibilityLabel={
+                  btn === '\u232B' ? 'Backspace'
+                    : btn === '\u00B1' ? 'Toggle sign'
+                    : btn === '\u00D7' ? 'Multiply'
+                    : btn === '\u00F7' ? 'Divide'
+                    : btn === '\u2212' ? 'Subtract'
+                    : btn
+                }
               >
                 <Text style={getTextStyle(btn)}>{btn}</Text>
               </TouchableOpacity>
@@ -162,7 +204,14 @@ function StandardCalc() {
           </View>
         ))}
       </View>
-      <TouchableOpacity onPress={copyResult} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel="Copy result to clipboard">
+
+      {/* Copy */}
+      <TouchableOpacity
+        onPress={copyResult}
+        activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel="Copy result to clipboard"
+      >
         <Text style={[styles.copyButton, copyFailed && { color: theme.negative }]}>
           {copied ? '\u2713 Copied!' : copyFailed ? 'Copy failed' : '\u2398 Copy result'}
         </Text>

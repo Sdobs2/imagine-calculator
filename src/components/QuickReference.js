@@ -1,3 +1,10 @@
+/**
+ * QuickReference — Percentage reference table.
+ *
+ * Displays common percentages with their decimal, fraction equivalents
+ * and mental math shortcuts. Clean table layout with accent highlighting.
+ */
+
 import { useMemo, memo } from 'react';
 import { View, Text } from 'react-native';
 import { useTheme } from '../utils/ThemeContext';
@@ -18,14 +25,18 @@ function QuickReference() {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <View style={[styles.card, { marginTop: 16 }]}>
+    <View style={styles.card}>
       <Text style={styles.cardLabel}>Quick Reference</Text>
+
+      {/* Table header */}
       <View style={[styles.tableRow, styles.tableHeaderRow]}>
         <Text style={[styles.tableHeader, { flex: 1 }]}>%</Text>
         <Text style={[styles.tableHeader, { flex: 1 }]}>Dec</Text>
         <Text style={[styles.tableHeader, { flex: 1 }]}>Frac</Text>
         <Text style={[styles.tableHeader, { flex: 2 }]}>Shortcut</Text>
       </View>
+
+      {/* Table rows */}
       {data.map((row) => (
         <View key={row.pct} style={styles.tableRow}>
           <Text style={[styles.tableCellHighlight, { flex: 1 }]}>{row.pct}</Text>

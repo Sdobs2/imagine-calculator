@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { COINGECKO_URL, COINGECKO_DEMO_KEY, SUPPORTED_CRYPTOS, PRICE_REFRESH_MS } from './constants';
+import {
+  COINGECKO_URL,
+  COINGECKO_DEMO_KEY,
+  SUPPORTED_CRYPTOS,
+  PRICE_REFRESH_MS,
+  FALLBACK_PRICES,
+} from './constants';
 
 const IDS = SUPPORTED_CRYPTOS.map((c) => c.id).join(',');
 const URL = `${COINGECKO_URL}?ids=${IDS}&vs_currencies=usd&include_24hr_change=true`;
@@ -13,7 +19,8 @@ function friendlyError(err) {
 }
 
 export function useCryptoPrices() {
-  const [prices, setPrices] = useState(null);
+  // Start with fallback prices so calculators work immediately
+  const [prices, setPrices] = useState(FALLBACK_PRICES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -21,9 +28,13 @@ export function useCryptoPrices() {
 
   const fetchPrices = useCallback(async () => {
     try {
-      const res = await fetch(URL, {
-        headers: { 'x-cg-demo-api-key': COINGECKO_DEMO_KEY },
-      });
+      // Build headers — only include the demo key if a real one is configured
+      const headers = {};
+      if (COINGECKO_DEMO_KEY && COINGECKO_DEMO_KEY !== 'CG-DEMO') {
+        headers['x-cg-demo-api-key'] = COINGECKO_DEMO_KEY;
+      }
+
+      const res = await fetch(URL, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setPrices(data);
@@ -31,7 +42,7 @@ export function useCryptoPrices() {
       setError(null);
     } catch (err) {
       setError(friendlyError(err));
-      // Keep stale prices — don't clear on refresh failure
+      // Keep existing prices (fallback or last successful fetch)
     } finally {
       setLoading(false);
     }

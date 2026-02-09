@@ -1,3 +1,15 @@
+/**
+ * TimeMachineCalc — Historical "What if I invested in X in year Y?" calculator.
+ *
+ * Features:
+ *   - Asset selector (stocks + crypto) with categorized chips
+ *   - Year picker with scrollable modal
+ *   - Historical price fetch (Alpha Vantage for stocks, CoinGecko for crypto)
+ *   - Result cards showing shares/coins, current value, profit, multiplier
+ *   - Inline loading and error states
+ *   - Full accessibility labels
+ */
+
 import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -6,6 +18,8 @@ import { SUPPORTED_STOCKS, SUPPORTED_CRYPTOS, COINGECKO_DEMO_KEY } from '../util
 import { calculateTimeMachine, formatUSD } from '../utils/imaginecalc';
 import createStyles from '../styles';
 import YearPicker from './YearPicker';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getMultiplierLabel(m) {
   if (m <= 0) return '0x';
@@ -24,27 +38,17 @@ const CRYPTO_ASSETS = SUPPORTED_CRYPTOS.map((c) => ({
 }));
 const ALL_ASSETS = [...STOCK_ASSETS, ...CRYPTO_ASSETS];
 
-// Earliest year with reliable data for each asset
+// Earliest year with reliable data per asset
 const ASSET_START_YEARS = {
-  TSLA: 2010,
-  AAPL: 2005,
-  AMZN: 2005,
-  GOOG: 2005,
-  NVDA: 2005,
-  META: 2012,
-  MSFT: 2005,
-  NFLX: 2005,
-  'BRK.B': 2005,
-  JPM: 2005,
-  BTC: 2011,
-  ETH: 2016,
-  SOL: 2021,
-  DOGE: 2014,
-  XRP: 2014,
+  TSLA: 2010, AAPL: 2005, AMZN: 2005, GOOG: 2005, NVDA: 2005,
+  META: 2012, MSFT: 2005, NFLX: 2005, 'BRK.B': 2005, JPM: 2005,
+  BTC: 2011, ETH: 2016, SOL: 2021, DOGE: 2014, XRP: 2014,
 };
 
 const ALL_YEARS = [];
 for (let y = 2025; y >= 2005; y--) ALL_YEARS.push(y);
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 function TimeMachineCalc({ prices }) {
   const { theme } = useTheme();
@@ -62,7 +66,7 @@ function TimeMachineCalc({ prices }) {
 
   const asset = ALL_ASSETS.find((a) => a.symbol === selectedAsset);
 
-  // Filter years based on selected asset
+  // Filter available years based on asset's data availability
   const availableYears = useMemo(() => {
     const startYear = ASSET_START_YEARS[selectedAsset] || 2005;
     return ALL_YEARS.filter((y) => y >= startYear);
@@ -76,7 +80,8 @@ function TimeMachineCalc({ prices }) {
     }
   }, [selectedAsset]);
 
-  // Fetch historical price when asset/year changes
+  // ─── Fetch historical price ───────────────────────────────────────────────
+
   useEffect(() => {
     if (!asset) return;
     let cancelled = false;
@@ -88,9 +93,14 @@ function TimeMachineCalc({ prices }) {
 
       try {
         if (asset.type === 'stock') {
-          const res = await fetch(
-            `/api/stock-history?symbol=${asset.symbol}&year=${selectedYear}`,
-          );
+          // Stock historical data requires a backend API route (/api/stock-history).
+          // If the endpoint doesn't exist, show a helpful message.
+          let res;
+          try {
+            res = await fetch(`/api/stock-history?symbol=${asset.symbol}&year=${selectedYear}`);
+          } catch {
+            throw new Error(`Stock historical data is not available yet. Coming soon!`);
+          }
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
             if (res.status === 500 && body.error?.includes('API key')) {
@@ -106,16 +116,18 @@ function TimeMachineCalc({ prices }) {
           const data = await res.json();
           if (!cancelled) setHistoricalData(data);
         } else {
-          // Crypto: use CoinGecko history
+          // Crypto: CoinGecko historical endpoint
           const dateStr = `01-01-${selectedYear}`;
+          const headers = {};
+          if (COINGECKO_DEMO_KEY && COINGECKO_DEMO_KEY !== 'CG-DEMO') {
+            headers['x-cg-demo-api-key'] = COINGECKO_DEMO_KEY;
+          }
           const res = await fetch(
             `https://api.coingecko.com/api/v3/coins/${asset.id}/history?date=${dateStr}&localization=false`,
-            { headers: { 'x-cg-demo-api-key': COINGECKO_DEMO_KEY } },
+            { headers },
           );
           if (!res.ok) {
-            if (res.status === 429) {
-              throw new Error('Rate limited. Please wait a moment.');
-            }
+            if (res.status === 429) throw new Error('Rate limited. Please wait a moment.');
             throw new Error(`Unable to load ${asset.symbol} data for ${selectedYear}.`);
           }
           const data = await res.json();
@@ -145,10 +157,7 @@ function TimeMachineCalc({ prices }) {
   // Get current price
   const currentPrice = useMemo(() => {
     if (!asset) return 0;
-    if (asset.type === 'crypto' && prices?.[asset.id]) {
-      return prices[asset.id].usd;
-    }
-    // For stocks, use the latest close from historical data if available
+    if (asset.type === 'crypto' && prices?.[asset.id]) return prices[asset.id].usd;
     if (historicalData?.currentPrice) return historicalData.currentPrice;
     return 0;
   }, [asset, prices, historicalData]);
@@ -177,10 +186,13 @@ function TimeMachineCalc({ prices }) {
     }
   }, [result, asset, invested, selectedYear, historicalPrice]);
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <View style={styles.card}>
       <Text style={styles.cardLabel}>Time Machine</Text>
 
+      {/* Dynamic descriptive sentence */}
       <View style={styles.descContainer}>
         <Text style={styles.descText}>
           What if you invested{' '}
@@ -190,13 +202,9 @@ function TimeMachineCalc({ prices }) {
         </Text>
       </View>
 
-      {/* Stock selector */}
+      {/* ─── Asset Selectors ─────────────────────────────────────────── */}
       <Text style={styles.sectionLabel}>Stocks</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 12 }}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
         {STOCK_ASSETS.map((a) => {
           const isSelected = a.symbol === selectedAsset;
           return (
@@ -205,6 +213,9 @@ function TimeMachineCalc({ prices }) {
               style={[styles.chip, isSelected && styles.chipSelected, { marginRight: 8 }]}
               onPress={() => setSelectedAsset(a.symbol)}
               activeOpacity={0.6}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`Select ${a.name}`}
             >
               <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {a.symbol}
@@ -214,13 +225,8 @@ function TimeMachineCalc({ prices }) {
         })}
       </ScrollView>
 
-      {/* Crypto selector */}
       <Text style={styles.sectionLabel}>Crypto</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 16 }}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
         {CRYPTO_ASSETS.map((a) => {
           const isSelected = a.symbol === selectedAsset;
           return (
@@ -229,6 +235,9 @@ function TimeMachineCalc({ prices }) {
               style={[styles.chip, isSelected && styles.chipSelected, { marginRight: 8 }]}
               onPress={() => setSelectedAsset(a.symbol)}
               activeOpacity={0.6}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`Select ${a.name}`}
             >
               <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {a.symbol}
@@ -238,7 +247,7 @@ function TimeMachineCalc({ prices }) {
         })}
       </ScrollView>
 
-      {/* Year selector */}
+      {/* ─── Year Selector ───────────────────────────────────────────── */}
       <Text style={styles.sectionLabel}>Year</Text>
       <YearPicker
         selectedYear={selectedYear}
@@ -252,23 +261,18 @@ function TimeMachineCalc({ prices }) {
           <Text style={styles.currentPriceText}>
             {asset.symbol} low in {selectedYear}:{' '}
           </Text>
-          <Text style={styles.currentPriceAmount}>
-            ${formatUSD(historicalPrice)}
-          </Text>
+          <Text style={styles.currentPriceAmount}>${formatUSD(historicalPrice)}</Text>
         </View>
       )}
 
-      {histLoading && (
-        <Text style={styles.hintText}>Loading historical data...</Text>
-      )}
-
+      {histLoading && <Text style={styles.hintText}>Loading historical data...</Text>}
       {histError && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{histError}</Text>
         </View>
       )}
 
-      {/* Investment amount */}
+      {/* ─── Investment Amount ───────────────────────────────────────── */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Amount Invested</Text>
         <View style={styles.inputWrapper}>
@@ -277,18 +281,20 @@ function TimeMachineCalc({ prices }) {
             value={invested}
             onChangeText={setInvested}
             placeholder="1,000"
-            placeholderTextColor={theme.textTertiary}
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="decimal-pad"
             selectionColor={theme.accent}
             style={[styles.input, { paddingLeft: 28 }, focusedField === 'inv' && styles.inputFocused]}
             onFocus={() => setFocusedField('inv')}
             onBlur={() => setFocusedField(null)}
-            accessibilityLabel="Amount invested"
+            accessibilityLabel="Amount invested in dollars"
+            accessibilityHint="Enter how much you would have invested"
           />
         </View>
+        <Text style={styles.inputHelperText}>How much you would have put in back then</Text>
       </View>
 
-      {/* Results */}
+      {/* ─── Results ─────────────────────────────────────────────────── */}
       {hasResult && (
         <>
           <View style={styles.resultsGrid}>
@@ -303,27 +309,41 @@ function TimeMachineCalc({ prices }) {
 
             <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
               <Text style={styles.investResultLabel}>Value Today</Text>
-              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}>
+              <Text
+                style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}
+                accessibilityLiveRegion="polite"
+              >
                 ${formatUSD(result.currentValue)}
               </Text>
             </View>
 
             <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
               <Text style={styles.investResultLabel}>Total Return</Text>
-              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}>
+              <Text
+                style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 18 }]}
+                accessibilityLiveRegion="polite"
+              >
                 {result.profit >= 0 ? '+' : ''}${formatUSD(Math.abs(result.profit))}
               </Text>
             </View>
 
             <View style={[styles.resultGridItem, { backgroundColor: isGain ? theme.positiveBg : theme.negativeBg, borderColor: isGain ? theme.positiveBorder : theme.negativeBorder }]}>
               <Text style={styles.investResultLabel}>Multiplier</Text>
-              <Text style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 20 }]}>
+              <Text
+                style={[styles.investResultValue, { color: isGain ? theme.positive : theme.negative, fontSize: 22 }]}
+                accessibilityLiveRegion="polite"
+              >
                 {getMultiplierLabel(result.multiplier)}
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity onPress={copyResult} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel="Copy result">
+          <TouchableOpacity
+            onPress={copyResult}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel="Copy result to clipboard"
+          >
             <Text style={[styles.copyButton, copyFailed && { color: theme.negative }]}>
               {copied ? '\u2713 Copied!' : copyFailed ? 'Copy failed' : '\u2398 Copy result'}
             </Text>

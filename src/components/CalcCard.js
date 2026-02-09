@@ -1,3 +1,15 @@
+/**
+ * CalcCard — Percentage calculator card (whatIs, whatPercent, change).
+ *
+ * Features:
+ *   - Dynamic descriptive sentence that updates with input values
+ *   - Horizontal input row with operator symbol
+ *   - Live-updating result with accessibility announcements
+ *   - Focus state transitions for input fields
+ *   - Copy result to clipboard
+ *   - Proper ARIA labels and keyboard accessibility
+ */
+
 import { useState, useMemo, useCallback, memo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -5,6 +17,7 @@ import { calculate, formatResult } from '../utils/calculate';
 import { useTheme } from '../utils/ThemeContext';
 import createStyles from '../styles';
 
+// Accessibility metadata for each calculator type
 const accessibilityLabels = {
   whatIs: { a: 'Percentage value', b: 'Base number' },
   whatPercent: { a: 'Part value', b: 'Whole value' },
@@ -39,33 +52,34 @@ function CalcCard({ type }) {
   const result = useMemo(() => calculate(type, a, b), [type, a, b]);
   const hasInput = a !== '' && b !== '';
 
-  const placeholders = {
-    whatIs: { a: 'Percentage', b: 'Number' },
-    whatPercent: { a: 'Part', b: 'Whole' },
-    change: { a: 'From', b: 'To' },
+  // Card titles and input placeholders per type
+  const meta = {
+    whatIs: { title: 'What is X% of Y?', placeholders: { a: 'Percentage', b: 'Number' } },
+    whatPercent: { title: 'X is what % of Y?', placeholders: { a: 'Part', b: 'Whole' } },
+    change: { title: '% Change', placeholders: { a: 'From', b: 'To' } },
   };
-  const p = placeholders[type];
+  const { title, placeholders: p } = meta[type];
 
   const operatorSymbol =
     type === 'change' ? '\u2192' : type === 'whatPercent' ? '\u00F7' : '\u00D7';
 
+  // Dynamic description sentence
   const descriptions = {
     whatIs: (valA, valB) => (
       <Text style={styles.descText}>
-        What is{' '}
-        <Text style={styles.descHighlight}>{valA || 'X'}%</Text> of{' '}
+        What is <Text style={styles.descHighlight}>{valA || 'X'}%</Text> of{' '}
         <Text style={styles.descHighlight}>{valB || 'Y'}</Text>?
       </Text>
     ),
     whatPercent: (valA, valB) => (
       <Text style={styles.descText}>
-        <Text style={styles.descHighlight}>{valA || 'X'}</Text> is what percent
-        of <Text style={styles.descHighlight}>{valB || 'Y'}</Text>?
+        <Text style={styles.descHighlight}>{valA || 'X'}</Text> is what percent of{' '}
+        <Text style={styles.descHighlight}>{valB || 'Y'}</Text>?
       </Text>
     ),
     change: (valA, valB) => (
       <Text style={styles.descText}>
-        % change from{' '}
+        Percent change from{' '}
         <Text style={styles.descHighlight}>{valA || 'X'}</Text> to{' '}
         <Text style={styles.descHighlight}>{valB || 'Y'}</Text>
       </Text>
@@ -86,19 +100,22 @@ function CalcCard({ type }) {
 
   return (
     <View style={styles.card}>
-      {/* Description */}
+      {/* Card title */}
+      <Text style={styles.cardLabel}>{title}</Text>
+
+      {/* Dynamic description */}
       <View style={styles.descContainer}>
         {descriptions[type](a, b)}
       </View>
 
-      {/* Inputs */}
+      {/* Input row */}
       <View style={styles.inputRow}>
         <View style={styles.inputWrapper}>
           <TextInput
             value={a}
             onChangeText={setA}
             placeholder={p.a}
-            placeholderTextColor={theme.textTertiary}
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="decimal-pad"
             selectionColor={theme.accent}
             style={[
@@ -122,7 +139,7 @@ function CalcCard({ type }) {
             value={b}
             onChangeText={setB}
             placeholder={p.b}
-            placeholderTextColor={theme.textTertiary}
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="decimal-pad"
             selectionColor={theme.accent}
             style={[
@@ -137,7 +154,7 @@ function CalcCard({ type }) {
         </View>
       </View>
 
-      {/* Result */}
+      {/* Result box */}
       <View
         style={[
           styles.resultBox,

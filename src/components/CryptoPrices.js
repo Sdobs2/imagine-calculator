@@ -1,3 +1,14 @@
+/**
+ * CryptoPrices — Live crypto price ticker card.
+ *
+ * Displays current prices for supported cryptocurrencies with 24h change.
+ * Features:
+ *   - Horizontal scroll for price cards
+ *   - Last updated timestamp with "time ago" format
+ *   - Loading skeleton states
+ *   - Error handling with retry
+ */
+
 import { useMemo, memo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '../utils/ThemeContext';
@@ -37,21 +48,29 @@ function CryptoPrices({ prices, loading, error, lastUpdated, onRetry }) {
 
   return (
     <View style={styles.card}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Text style={styles.cardLabel}>Live Prices</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={styles.liveDot} />
+          <Text style={styles.cardLabel}>Live Prices</Text>
+        </View>
         {timeAgo && (
           <Text style={styles.lastUpdatedText}>Updated {timeAgo}</Text>
         )}
       </View>
 
+      {/* Skeleton loading state */}
       {loading && !prices && (
         <View style={styles.cryptoPriceRow}>
           {SUPPORTED_CRYPTOS.map((crypto) => (
-            <View key={crypto.id} style={[styles.cryptoPriceCard, styles.skeleton, { height: 80 }]} />
+            <View
+              key={crypto.id}
+              style={[styles.cryptoPriceCard, styles.skeleton, { height: 88, opacity: 0.5 }]}
+            />
           ))}
         </View>
       )}
 
+      {/* Price cards */}
       {prices && (
         <ScrollView
           horizontal
@@ -62,7 +81,7 @@ function CryptoPrices({ prices, loading, error, lastUpdated, onRetry }) {
             const data = prices[crypto.id];
             if (!data) return null;
             const change = data.usd_24h_change;
-            const isPositive = change >= 0;
+            const isPositive = change != null && change >= 0;
 
             return (
               <View key={crypto.id} style={styles.cryptoPriceCard}>
@@ -76,6 +95,7 @@ function CryptoPrices({ prices, loading, error, lastUpdated, onRetry }) {
                       styles.cryptoPriceChange,
                       { color: isPositive ? theme.positive : theme.negative },
                     ]}
+                    accessibilityLabel={`${crypto.symbol} 24h change: ${formatChange(change)}`}
                   >
                     {isPositive ? '\u25B2' : '\u25BC'} {formatChange(change)}
                   </Text>
@@ -86,16 +106,17 @@ function CryptoPrices({ prices, loading, error, lastUpdated, onRetry }) {
         </ScrollView>
       )}
 
+      {/* Error state */}
       {error && !prices && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>
-            {error}
-          </Text>
+          <Text style={styles.errorBannerText}>{error}</Text>
           {onRetry && (
             <TouchableOpacity
               style={styles.retryButton}
               onPress={onRetry}
               activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading prices"
             >
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>

@@ -41,6 +41,77 @@ export function calculateTimeMachine(
 }
 
 /**
+ * Calculate compound growth with optional monthly contributions.
+ * Uses month-by-month accumulation for accurate exponential curves.
+ *
+ * @param {number} initialInvestment  Lump-sum starting amount
+ * @param {number} monthlyContribution  Amount added each month
+ * @param {number} annualReturn  Annual return as a decimal (0.10 = 10%)
+ * @param {number} years  Time horizon in years
+ */
+export function calculateCompoundGrowth(
+  initialInvestment,
+  monthlyContribution,
+  annualReturn,
+  years,
+) {
+  if (years <= 0) return null;
+
+  const totalMonths = Math.round(years * 12);
+  const monthlyRate = Math.pow(1 + annualReturn, 1 / 12) - 1;
+
+  let balance = initialInvestment;
+  for (let m = 1; m <= totalMonths; m++) {
+    balance = balance * (1 + monthlyRate) + monthlyContribution;
+  }
+
+  const totalContributed = initialInvestment + monthlyContribution * totalMonths;
+  const interestEarned = balance - totalContributed;
+  const multiplier = totalContributed > 0 ? balance / totalContributed : 0;
+
+  return { finalValue: balance, totalContributed, interestEarned, multiplier };
+}
+
+/**
+ * Generate chart data points for compound growth visualization.
+ * Returns an array of { month, value, invested } compatible with GrowthChart.
+ */
+export function generateCompoundChartData(
+  initialInvestment,
+  monthlyContribution,
+  annualReturn,
+  years,
+) {
+  if (years <= 0) return [];
+
+  const totalMonths = Math.round(years * 12);
+  const monthlyRate = Math.pow(1 + annualReturn, 1 / 12) - 1;
+
+  // Sample up to 48 points for smooth exponential curves
+  const numPoints = Math.min(Math.max(totalMonths + 1, 3), 49);
+  const step = totalMonths / (numPoints - 1);
+  const data = [];
+
+  let balance = initialInvestment;
+  let lastComputedMonth = 0;
+
+  for (let i = 0; i < numPoints; i++) {
+    const targetMonth = Math.min(Math.round(i * step), totalMonths);
+
+    // Advance the simulation from lastComputedMonth to targetMonth
+    for (let m = lastComputedMonth + 1; m <= targetMonth; m++) {
+      balance = balance * (1 + monthlyRate) + monthlyContribution;
+    }
+    lastComputedMonth = targetMonth;
+
+    const totalInvested = initialInvestment + monthlyContribution * targetMonth;
+    data.push({ month: targetMonth, value: balance, invested: totalInvested });
+  }
+
+  return data;
+}
+
+/**
  * Format a crypto amount with appropriate decimal places.
  */
 export function formatCryptoAmount(amount) {
